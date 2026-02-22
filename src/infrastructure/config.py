@@ -124,7 +124,7 @@ OPENAI_CHAT_MODEL = CHAT_MODEL
 # Embedding Dimensions
 # ========================================
 
-# ⚠️ IMPORTANT: EMBEDDING_DIM must match the model's output dimensions
+#  IMPORTANT: EMBEDDING_DIM must match the model's output dimensions
 #
 # Supported models:
 #   - "text-embedding-3-small"  → 1536 dims (recommended for Qdrant)
@@ -326,7 +326,7 @@ def validate() -> None:
     if not api_key:
         key_name = "OPENROUTER_API_KEY" if PROVIDER == "openrouter" else f"{PROVIDER.upper()}_API_KEY"
         raise ValueError(
-            f"❌ Missing required secret: {key_name}\n"
+            f" Missing required secret: {key_name}\n"
             f"Please add it to your .env file."
         )
 
@@ -337,7 +337,7 @@ def validate() -> None:
         try:
             dir_path.mkdir(parents=True, exist_ok=True)
         except (PermissionError, OSError) as e:
-            raise OSError(f"❌ Cannot create directory {dir_path}: {e}")
+            raise OSError(f" Cannot create directory {dir_path}: {e}")
 
 
 def dump() -> None:
@@ -346,21 +346,21 @@ def dump() -> None:
     logger.info("CONFIGURATION (NON-SECRETS ONLY)")
     logger.info("=" * 60)
 
-    logger.info("\n🌐 Provider:")
+    logger.info("\n Provider:")
     logger.info(f"   Provider: {PROVIDER}")
     logger.info(f"   Model Tier: {MODEL_TIER}")
     logger.info(f"   Chat Model: {CHAT_MODEL}")
     logger.info(f"   Embedding Model: {EMBEDDING_MODEL}")
     logger.info(f"   Embedding Dimensions: {EMBEDDING_DIM}")
 
-    logger.info("\n📁 Directories & Storage:")
+    logger.info("\n Directories & Storage:")
     logger.info(f"   Data Root: {DATA_DIR}")
     logger.info(f"   Knowledge Base: {KB_DIR}")
-    logger.info(f"   🟡 RAG Vectors: Qdrant Cloud ({QDRANT_COLLECTION_NAME})")
-    logger.info(f"   🟡 CAG Cache: Qdrant Cloud ({CAG_COLLECTION_NAME})")
-    logger.info(f"   🟢 ST + LT Memory + CRM: Supabase PostgreSQL")
+    logger.info(f"    RAG Vectors: Qdrant Cloud ({QDRANT_COLLECTION_NAME})")
+    logger.info(f"    CAG Cache: Qdrant Cloud ({CAG_COLLECTION_NAME})")
+    logger.info(f"    ST + LT Memory + CRM: Supabase PostgreSQL")
 
-    logger.info("\n🔧 Chunking:")
+    logger.info("\n Chunking:")
     logger.info(f"   Fixed Size: {FIXED_CHUNK_SIZE} tokens")
     logger.info(f"   Fixed Overlap: {FIXED_CHUNK_OVERLAP} tokens")
     logger.info(f"   Sliding Window: {SLIDING_WINDOW_SIZE} tokens")
@@ -368,7 +368,7 @@ def dump() -> None:
     logger.info(f"   Parent-Child: {CHILD_CHUNK_SIZE} → {PARENT_CHUNK_SIZE} tokens")
     logger.info(f"   Late Chunk: {LATE_CHUNK_BASE_SIZE} → {LATE_CHUNK_SPLIT_SIZE} tokens")
 
-    logger.info("\n🔍 Retrieval:")
+    logger.info("\n Retrieval:")
     logger.info(f"   Top-K Results: {TOP_K_RESULTS}")
     logger.info(f"   Similarity Threshold: {SIMILARITY_THRESHOLD}")
 
