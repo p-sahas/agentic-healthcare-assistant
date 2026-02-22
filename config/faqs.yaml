@@ -1,0 +1,113 @@
+# =============================================================================
+# NAWALOKA HOSPITAL — KNOWN FAQs (Internal Knowledge Base)
+# =============================================================================
+# These FAQs are pre-loaded into the semantic CAG cache at agent startup.
+# Run 'rag_tool.warm_cache(queries)' to generate + cache responses.
+#
+# Benefits:
+# - Instant responses for common questions (sub-1ms, $0)
+# - Semantic matching catches paraphrases (cosine ≥ 0.90)
+# - Cache stored in Qdrant (dedicated cag_cache collection, HNSW COSINE)
+# =============================================================================
+
+# Staff & HR Policies
+staff:
+  - "What are the working hours and shift timings at Nawaloka Hospital?"
+  - "What is the leave policy for permanent employees?"
+  - "How many sick days do employees get?"
+  - "What is the maternity leave entitlement?"
+  - "What is the dress code for clinical staff?"
+  - "What are the employee medical benefits?"
+  - "What is the disciplinary process at Nawaloka?"
+
+# Clinical Protocols
+clinical:
+  - "What is the patient admission process?"
+  - "How does the triage system work in the emergency department?"
+  - "What is the ISBAR handover protocol?"
+  - "What is the discharge process for inpatients?"
+  - "What are the five rights of medication administration?"
+  - "What is the surgical safety checklist?"
+  - "What is the blood transfusion protocol?"
+
+# Emergency Procedures
+emergency:
+  - "What is the Code Blue procedure for cardiac arrest?"
+  - "What should staff do in case of a fire emergency?"
+  - "What is the Code Orange mass casualty protocol?"
+  - "What happens during a power failure at the hospital?"
+  - "What are the fire extinguisher types and their uses?"
+
+# Infection Control
+infection_control:
+  - "What is the hand hygiene policy?"
+  - "What PPE is required for airborne precautions?"
+  - "How many negative pressure isolation rooms does Nawaloka have?"
+  - "What is the cleaning protocol for patient rooms?"
+  - "What is the needlestick injury protocol?"
+  - "How does the antibiotic stewardship programme work?"
+
+# Patient Safety
+patient_safety:
+  - "How is patient identification verified?"
+  - "What are the high-alert medications at Nawaloka?"
+  - "What is the fall prevention programme?"
+  - "How are medication errors reported?"
+  - "What is the Braden Scale for pressure injury risk?"
+  - "How does incident reporting work?"
+
+# Cardiology
+cardiology:
+  - "What cardiology services does Nawaloka offer?"
+  - "What is the STEMI door-to-balloon time target?"
+  - "How does the cardiac rehabilitation programme work?"
+  - "What tests are available in the non-invasive cardiology lab?"
+  - "What is the heart failure management pathway?"
+
+# Radiology
+radiology:
+  - "What imaging equipment does Nawaloka have?"
+  - "What preparation is needed for an MRI scan?"
+  - "What is the contrast reaction management protocol?"
+  - "What are the MRI safety contraindications?"
+  - "How long does it take to get a radiology report?"
+
+# Laboratory
+laboratory:
+  - "What are the lab turnaround times?"
+  - "What are the blood specimen tube colours and their uses?"
+  - "What are the critical lab values that require immediate notification?"
+  - "How does the blood bank manage emergency blood requests?"
+  - "What quality control measures does the laboratory follow?"
+
+# Pharmacy
+pharmacy:
+  - "What are the pharmacy operating hours?"
+  - "How are controlled substances managed?"
+  - "What is the therapeutic drug monitoring process?"
+  - "How are cytotoxic drugs handled?"
+  - "What drugs require TDM at Nawaloka?"
+
+# Billing & Insurance
+billing:
+  - "What payment methods does Nawaloka accept?"
+  - "What insurance companies have direct billing agreements?"
+  - "What is the room charge for a private room?"
+  - "How much does a coronary angiogram cost?"
+  - "What is the financial hardship policy?"
+
+# Data Privacy
+privacy:
+  - "What is the data privacy policy?"
+  - "How is patient data classified?"
+  - "What is the break-the-glass procedure for EMR access?"
+  - "How long are patient records retained?"
+  - "What happens in case of a data breach?"
+
+# Training
+training:
+  - "What is the new employee orientation programme?"
+  - "What mandatory training is required annually?"
+  - "What CME requirements do doctors need to meet?"
+  - "What simulation training facilities are available?"
+  - "What nursing specialisation courses does Nawaloka offer?"
