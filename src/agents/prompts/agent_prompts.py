@@ -19,9 +19,9 @@ Three prompt roles:
 
 from infrastructure.observability import fetch_prompt
 
-# ─────────────────────────────────────────────────────────────
+
 # LangFuse prompt names → create these in your dashboard
-# ─────────────────────────────────────────────────────────────
+
 
 LANGFUSE_PROMPT_NAMES = {
     "agent_system":       "nawaloka-agent-system",
@@ -31,9 +31,9 @@ LANGFUSE_PROMPT_NAMES = {
     "synthesiser_user":   "nawaloka-synthesiser-user",
 }
 
-# ─────────────────────────────────────────────────────────────
+
 # 1. SYSTEM — Base agent persona (fallback)
-# ─────────────────────────────────────────────────────────────
+
 
 _AGENT_SYSTEM_FALLBACK = """\
 You are **Nawaloka Health Assistant**, a friendly and knowledgeable AI assistant
@@ -55,9 +55,9 @@ Communication rules:
 6. Respond in the same language as the patient (Sinhala, Tamil, or English).
 """
 
-# ─────────────────────────────────────────────────────────────
+
 # 2. ROUTER — Intent classification (fallback)
-# ─────────────────────────────────────────────────────────────
+
 
 _ROUTER_SYSTEM_FALLBACK = """\
 You are a query router for a healthcare AI system.
@@ -105,9 +105,9 @@ USER MESSAGE:
 
 Classify and extract (JSON):"""
 
-# ─────────────────────────────────────────────────────────────
+
 # 3. SYNTHESISER — Final response generation (fallback)
-# ─────────────────────────────────────────────────────────────
+
 
 _SYNTHESISER_SYSTEM_FALLBACK = """\
 You are the response synthesiser for a healthcare AI assistant.
@@ -141,9 +141,7 @@ USER MESSAGE:
 Compose your reply:"""
 
 
-# ─────────────────────────────────────────────────────────────
 # Prompt builders — fetch from LangFuse, fall back to local
-# ─────────────────────────────────────────────────────────────
 
 
 def build_router_prompt(
