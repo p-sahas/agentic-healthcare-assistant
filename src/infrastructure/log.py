@@ -1,5 +1,5 @@
 """
-Centralised logging configuration — powered by **loguru**.
+Centralised logging configuration - powered by **loguru**.
 
 Usage (any module)::
 
@@ -7,7 +7,7 @@ Usage (any module)::
     logger.info("Hello")
     logger.success("Done ")
 
-Usage (entry-points — scripts, notebooks, CLI)::
+Usage (entry-points - scripts, notebooks, CLI)::
 
     from infrastructure.log import setup_logging
     setup_logging()              # defaults: INFO, stderr
@@ -32,12 +32,12 @@ from typing import Optional
 from loguru import logger
 
 
-# ── Format strings ────────────────────────────────────────────
+#  Format strings
 
 _FMT_FULL = (
     "<green>{time:HH:mm:ss}</green> | "
     "<level>{level: <8}</level> | "
-    "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> — "
+    "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - "
     "<level>{message}</level>"
 )
 
@@ -47,7 +47,7 @@ _FMT_NOTEBOOK = (
 )
 
 
-# ── Intercept handler ────────────────────────────────────────
+#  Intercept handler
 
 class _InterceptHandler(logging.Handler):
     """Route stdlib ``logging`` records into **loguru**.
@@ -75,7 +75,7 @@ class _InterceptHandler(logging.Handler):
         )
 
 
-# ── Public API ────────────────────────────────────────────────
+#  Public API
 
 def setup_logging(
     level: str = "INFO",
@@ -127,6 +127,8 @@ def setup_logging(
 
     # Intercept stdlib logging
     if intercept_stdlib:
-        logging.basicConfig(handlers=[_InterceptHandler()], level=0, force=True)
+        logging.basicConfig(
+            handlers=[_InterceptHandler()], level=0, force=True)
 
-    logger.debug("Loguru configured — level={}, notebook={}", level, for_notebook)
+    logger.debug("Loguru configured - level={}, notebook={}",
+                 level, for_notebook)

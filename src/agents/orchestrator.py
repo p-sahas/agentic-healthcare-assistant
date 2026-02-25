@@ -1,5 +1,5 @@
 """
-Agent Orchestrator — main execution loop.
+Agent Orchestrator - main execution loop.
 
 Flow:
   1. Recall memory (short-term turns + long-term facts).
@@ -26,6 +26,8 @@ from infrastructure.observability import (
     update_current_observation,
     flush,
 )
+
+
 @dataclass
 class AgentResponse:
     """
@@ -53,14 +55,14 @@ class AgentOrchestrator:
     The main agent loop that ties routing, tools, memory, and synthesis together.
 
     Dependencies (injected via '__init__'):
-        llm          — LangChain ChatOpenAI
-        st_store     — ShortTermMemoryStore
-        lt_store     — LongTermMemoryStore
-        recaller     — MemoryRecaller
-        distiller    — MemoryDistiller
-        crm_tool     — CRMTool   (optional — None if CRM is unavailable)
-        rag_tool     — RAGTool   (optional — None if KB is empty)
-        web_tool     — WebSearchTool (optional — None if Tavily key is missing)
+        llm          - LangChain ChatOpenAI
+        st_store     - ShortTermMemoryStore
+        lt_store     - LongTermMemoryStore
+        recaller     - MemoryRecaller
+        distiller    - MemoryDistiller
+        crm_tool     - CRMTool   (optional - None if CRM is unavailable)
+        rag_tool     - RAGTool   (optional - None if KB is empty)
+        web_tool     - WebSearchTool (optional - None if Tavily key is missing)
     """
 
     def __init__(
@@ -87,7 +89,7 @@ class AgentOrchestrator:
 
         self.router = QueryRouter(llm_router)
 
-    # public entry point 
+    # public entry point
 
     @observe(name="agent_chat")
     def chat(
@@ -99,7 +101,7 @@ class AgentOrchestrator:
         """
         Process a single user message through the full agent pipeline.
 
-        This is the **top-level LangFuse trace** — every sub-step
+        This is the **top-level LangFuse trace** - every sub-step
         (recall, route, tool, synthesise) appears as a nested span.
         """
         t0 = time.time()
@@ -111,13 +113,13 @@ class AgentOrchestrator:
             tags=["agent"],
         )
 
-        #  Step 1: Recall memory 
+        #  Step 1: Recall memory
         memory_context = self._recall_memory(user_id, session_id, user_message)
 
-        #  Step 2: Route 
+        #  Step 2: Route
         decision = self.router.route(user_message, memory_context)
         logger.info(
-            "Route: {} (action={}, conf={:.2f}) — {}",
+            "Route: {} (action={}, conf={:.2f}) - {}",
             decision.route,
             decision.action,
             decision.confidence,
@@ -135,10 +137,10 @@ class AgentOrchestrator:
             tool_output=tool_output,
         )
 
-        #  Step 5: Store turns in ST memory 
+        #  Step 5: Store turns in ST memory
         self._store_turns(user_id, session_id, user_message, answer)
 
-        # Step 6: Trigger distillation (background-safe) 
+        # Step 6: Trigger distillation (background-safe)
         self._maybe_distill(user_id, session_id)
 
         latency_ms = int((time.time() - t0) * 1000)
@@ -162,7 +164,7 @@ class AgentOrchestrator:
             latency_ms=latency_ms,
         )
 
-    # internal steps 
+    # internal steps
 
     @observe(name="memory_recall")
     def _recall_memory(
@@ -232,7 +234,7 @@ class AgentOrchestrator:
             update_current_observation(output=result[:500])
             return result
 
-        # direct — no tool needed
+        # direct - no tool needed
         return ""
 
     @observe(name="synthesiser", as_type="generation")
@@ -340,7 +342,7 @@ class AgentOrchestrator:
         except Exception as exc:
             logger.warning("Distillation skipped: {}", exc)
 
-    #  helpers 
+    #  helpers
 
     def _model_name(self) -> str:
         """Extract model name from the chat LLM for LangFuse metadata."""
@@ -351,9 +353,7 @@ class AgentOrchestrator:
         return "unknown"
 
 
-
 # Factory: build a fully-wired orchestrator from config
-
 
 
 def build_agent(
@@ -394,15 +394,20 @@ def build_agent(
     from memory.memory_ops import MemoryRecaller, MemoryDistiller
 
     # 3-model architecture
-    llm_chat = get_chat_llm(temperature=0)          # Gemini 2.0 Flash — synthesis
-    llm_router = get_router_llm(temperature=0)       # GPT-4o-mini — routing
-    llm_extractor = get_extractor_llm(temperature=0) # Llama 3.1 8B via Groq — extraction
+    # Gemini 2.0 Flash - synthesis
+    llm_chat = get_chat_llm(temperature=0)
+    llm_router = get_router_llm(temperature=0)       # GPT-4o-mini - routing
+    # Llama 3.1 8B via Groq - extraction
+    llm_extractor = get_extractor_llm(temperature=0)
     embedder = get_default_embeddings()
 
     logger.info("LLM models loaded:")
-    logger.info("   Chat (synthesis) : {}", getattr(llm_chat, 'model_name', getattr(llm_chat, 'model', '?')))
-    logger.info("   Router           : {}", getattr(llm_router, 'model_name', getattr(llm_router, 'model', '?')))
-    logger.info("   Extractor        : {}", getattr(llm_extractor, 'model_name', getattr(llm_extractor, 'model', '?')))
+    logger.info("   Chat (synthesis) : {}", getattr(
+        llm_chat, 'model_name', getattr(llm_chat, 'model', '?')))
+    logger.info("   Router           : {}", getattr(
+        llm_router, 'model_name', getattr(llm_router, 'model', '?')))
+    logger.info("   Extractor        : {}", getattr(llm_extractor,
+                'model_name', getattr(llm_extractor, 'model', '?')))
 
     # Memory stores
     st_store = ShortTermMemoryStore()
@@ -440,9 +445,11 @@ def build_agent(
             if KNOWN_FAQS:
                 warmed = rag_tool.warm_cache(KNOWN_FAQS)
                 if warmed:
-                    logger.info("CAG cache warmed with {} new FAQ entries", warmed)
+                    logger.info(
+                        "CAG cache warmed with {} new FAQ entries", warmed)
                 else:
-                    logger.info("CAG cache already warm ({} FAQs)", len(KNOWN_FAQS))
+                    logger.info("CAG cache already warm ({} FAQs)",
+                                len(KNOWN_FAQS))
         except Exception as exc:
             logger.warning("RAG tool unavailable: {}", exc)
 

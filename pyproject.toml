@@ -5,65 +5,65 @@ build-backend = "hatchling.build"
 [project]
 name = "agentic-memory-design"
 version = "1.0.0"
-description = "Agentic Memory Design — multi-memory AI assistant with routing engine, RAG, CRM, and observability"
+description = "Agentic Memory Design - multi-memory AI assistant with routing engine, RAG, CRM, and observability"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
 authors = [{ name = "Zuu Crew" }]
 
 dependencies = [
-    # ── Core LLM & Embedding Services ────────────────────────────
+    #  Core LLM & Embedding Services 
     "openai>=1.12.0",
     "anthropic>=0.18.0",
     "cohere>=4.47",
 
-    # ── LangChain Ecosystem ──────────────────────────────────────
+    #  LangChain Ecosystem 
     "langchain>=0.1.0",
     "langchain-core>=0.1.0",
     "langchain-community>=0.0.20",
     "langchain-openai>=0.0.5",
     "langchain-text-splitters>=0.2.0",
 
-    # ── Web Crawling & Content Extraction ────────────────────────
+    #  Web Crawling & Content Extraction 
     "playwright>=1.40.0",
     "beautifulsoup4>=4.12.0",
     "markdownify>=0.11.6",
     "lxml>=5.1.0",
     "nest-asyncio>=1.5.0",
 
-    # ── Vector Store & Semantic Search ───────────────────────────
+    #  Vector Store & Semantic Search ─
     "supabase>=2.3.0",
     "psycopg2-binary>=2.9.9",
     "pgvector>=0.2.4",
     "qdrant-client>=1.9.0",
     "sentence-transformers>=2.3.1",
 
-    # ── Text Processing & Tokenization ───────────────────────────
+    #  Text Processing & Tokenization ─
     "tiktoken>=0.5.2",
     "nltk>=3.8.1",
     "spacy>=3.7.0",
 
-    # ── Configuration & Environment ──────────────────────────────
+    #  Configuration & Environment 
     "python-dotenv>=1.0.0",
     "pydantic>=2.5.0",
     "pydantic-settings>=2.1.0",
 
-    # ── Utilities ────────────────────────────────────────────────
+    #  Utilities 
     "tqdm>=4.66.0",
     "pandas>=2.2.0",
     "numpy>=1.26.0",
     "requests>=2.31.0",
     "aiohttp>=3.9.0",
 
-    # ── Memory & Database ─────────────────────────────────────────
+    #  Memory & Database ─
     "sqlalchemy>=2.0.0",
     "pytz>=2024.1",
     "python-dateutil>=2.8.0",
 
-    # ── Web Search ─────────────────────────────────────────────────
+    #  Web Search ─
     "tavily-python>=0.3.0",
 
-    # ── Observability & Logging ──────────────────────────────────
+    #  Observability & Logging 
     "langfuse>=2.0.0",
     "loguru>=0.7.0",
 ]
@@ -86,7 +86,7 @@ dev = [
 [tool.hatch.build.targets.wheel]
 packages = ["src"]
 
-# ── Tool Configuration ──────────────────────────────────────────────
+#  Tool Configuration 
 
 [tool.black]
 line-length = 100

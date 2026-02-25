@@ -1,5 +1,5 @@
 """
-Memory prompts — distillation and recall prompt templates.
+Memory prompts - distillation and recall prompt templates.
 
 Prompts are fetched from **LangFuse Prompt Management** at runtime.
 Local fallbacks below are used when the prompt hasn't been created
@@ -131,7 +131,7 @@ LONG-TERM FACTS (distilled knowledge):
 Format a concise memory context (≤500 tokens):"""
 
 
-# Prompt builders — fetch from LangFuse, fall back to local
+# Prompt builders - fetch from LangFuse, fall back to local
 
 
 def build_distill_prompt(turns: list) -> tuple[str, str]:

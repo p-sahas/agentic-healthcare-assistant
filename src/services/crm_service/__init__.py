@@ -1,5 +1,5 @@
 """
-CRM services — Supabase PostgreSQL client, LLM-powered data generation.
+CRM services - Supabase PostgreSQL client, LLM-powered data generation.
 """
 
 from .crm_db_client import CRMDatabaseClient, get_crm_client

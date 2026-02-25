@@ -1,10 +1,10 @@
 """
-Supabase client — REST API + SQLAlchemy helpers.
+Supabase client - REST API + SQLAlchemy helpers.
 
 Provides:
-- ``get_supabase_client()``  — Supabase REST/Auth/Realtime client
-- ``get_supabase_engine()``  — Delegates to sql_client.get_sql_engine()
-- ``get_supabase_session()`` — Delegates to sql_client.get_session()
+- ``get_supabase_client()``  - Supabase REST/Auth/Realtime client
+- ``get_supabase_engine()``  - Delegates to sql_client.get_sql_engine()
+- ``get_supabase_session()`` - Delegates to sql_client.get_session()
 - Utility functions: test_connection, pgvector check, schema init, RLS, etc.
 
 The canonical SQLAlchemy engine/session lives in ``sql_client.py``.
@@ -21,7 +21,7 @@ from supabase import create_client, Client
 
 from infrastructure.config import EMBEDDING_DIM
 
-# Canonical engine/session — single source of truth
+# Canonical engine/session - single source of truth
 from .sql_client import get_sql_engine, get_session
 # ---------------------------------------------------------------------------
 # Supabase REST client (Auth, Realtime, Storage)
@@ -57,7 +57,7 @@ def get_supabase_client() -> Client:
 
 
 # ---------------------------------------------------------------------------
-# SQLAlchemy delegates — thin wrappers over sql_client
+# SQLAlchemy delegates - thin wrappers over sql_client
 # ---------------------------------------------------------------------------
 
 
@@ -114,7 +114,8 @@ def check_pgvector_installed() -> bool:
             logger.info(" pgvector extension: INSTALLED")
         else:
             logger.warning("  pgvector extension: NOT INSTALLED")
-            logger.warning("   Run in Supabase SQL Editor: CREATE EXTENSION vector;")
+            logger.warning(
+                "   Run in Supabase SQL Editor: CREATE EXTENSION vector;")
 
         return installed
 
@@ -188,7 +189,8 @@ def validate_schema_dimensions():
                         f"   Fix: Run 'make clean-supabase && make init-supabase'"
                     )
 
-                logger.info(f" Schema validation passed: vector({EMBEDDING_DIM})")
+                logger.info(
+                    f" Schema validation passed: vector({EMBEDDING_DIM})")
             else:
                 logger.warning(
                     " Could not validate schema dimensions (table may not exist)"
@@ -208,4 +210,5 @@ try:
         validate_schema_dimensions()
 except Exception as e:
     logger.warning(f"Supabase not fully configured: {e}")
-    logger.info("Set SUPABASE_URL, SUPABASE_ANON_KEY, and SUPABASE_DB_URL in .env")
+    logger.info(
+        "Set SUPABASE_URL, SUPABASE_ANON_KEY, and SUPABASE_DB_URL in .env")

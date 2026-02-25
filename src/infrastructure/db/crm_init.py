@@ -9,6 +9,8 @@ This module provides helpers to verify the schema is present.
 from loguru import logger
 from sqlalchemy import text
 from .sql_client import get_sql_engine
+
+
 def init_crm_schema():
     """
     Verify CRM schema exists in Supabase PostgreSQL.
@@ -23,7 +25,7 @@ def init_crm_schema():
         logger.info(" CRM schema already exists in Supabase")
     else:
         logger.warning(
-            "  CRM tables missing — run 'make init-supabase' to create them"
+            "  CRM tables missing - run 'make init-supabase' to create them"
         )
 
 
@@ -35,7 +37,8 @@ def check_crm_schema() -> bool:
         True if all required tables exist
     """
     engine = get_sql_engine()
-    required_tables = ["locations", "specialties", "doctors", "patients", "bookings"]
+    required_tables = ["locations", "specialties",
+                       "doctors", "patients", "bookings"]
 
     with engine.connect() as conn:
         result = conn.execute(
@@ -61,4 +64,4 @@ if __name__ == "__main__":
     if check_crm_schema():
         logger.success(" CRM schema already exists")
     else:
-        logger.warning(" CRM tables missing — run 'make init-supabase'")
+        logger.warning(" CRM tables missing - run 'make init-supabase'")

@@ -13,7 +13,7 @@ from typing import List, Optional, Literal, Dict, Any, Protocol, Iterable
 class ConversationTurn:
     """
     A single turn in a conversation (user or assistant message).
-    
+
     Stored in short-term memory (Supabase ``st_turns`` table) as a ring buffer.
     """
     user_id: str
@@ -21,7 +21,7 @@ class ConversationTurn:
     role: Literal["user", "assistant"]
     content: str
     ts: float  # epoch seconds
-    
+
     def to_dict(self) -> Dict:
         """Convert to dictionary for JSON serialization."""
         return {
@@ -31,7 +31,7 @@ class ConversationTurn:
             "content": self.content,
             "ts": self.ts,
         }
-    
+
     @classmethod
     def from_dict(cls, data: Dict) -> "ConversationTurn":
         """Create from dictionary."""
@@ -48,7 +48,7 @@ class ConversationTurn:
 class MemoryFact:
     """
     A distilled long-term memory fact extracted from conversations.
-    
+
     Stored in Supabase Postgres (metadata + pgvector embeddings).
     """
     id: str
@@ -60,7 +60,7 @@ class MemoryFact:
     last_used_at: float = 0.0  # epoch seconds
     ttl_at: Optional[float] = None  # epoch seconds, None = no expiry
     pin: bool = False  # if True, do not shift reminders on collisions
-    
+
     def to_dict(self) -> Dict:
         """Convert to dictionary for JSON serialization."""
         return {
@@ -74,7 +74,7 @@ class MemoryFact:
             "ttl_at": self.ttl_at,
             "pin": self.pin,
         }
-    
+
     @classmethod
     def from_dict(cls, data: Dict) -> "MemoryFact":
         """Create from dictionary."""
@@ -95,7 +95,7 @@ class MemoryFact:
 class Episode:
     """
     A conversation episode stored in episodic long-term memory.
-    
+
     Represents a complete conversation session with full context.
     Stored in Supabase Postgres (metadata + pgvector summary embedding).
     """
@@ -108,7 +108,7 @@ class Episode:
     start_at: float = 0.0  # First turn timestamp
     end_at: float = 0.0  # Last turn timestamp
     turn_count: int = 0
-    
+
     def to_dict(self) -> Dict:
         """Convert to dictionary for JSON serialization."""
         return {
@@ -122,7 +122,7 @@ class Episode:
             "end_at": self.end_at,
             "turn_count": self.turn_count,
         }
-    
+
     @classmethod
     def from_dict(cls, data: Dict) -> "Episode":
         """Create from dictionary."""
@@ -143,7 +143,7 @@ class Episode:
 class ReminderIntent:
     """
     A reminder intent extracted from a memory fact.
-    
+
     Can specify RRULE (recurring) or offset (one-time) reminders.
     """
     fact_id: str
@@ -152,7 +152,7 @@ class ReminderIntent:
     rrule: Optional[str] = None  # e.g., "FREQ=DAILY;BYHOUR=8;BYMINUTE=0"
     offset: Optional[Dict] = None  # e.g., {"minutes": 45}, {"hours": 2}
     meta: Optional[Dict] = None
-    
+
     def to_dict(self) -> Dict:
         """Convert to dictionary for JSON serialization."""
         return {
@@ -163,7 +163,7 @@ class ReminderIntent:
             "offset": self.offset,
             "meta": self.meta or {},
         }
-    
+
     @classmethod
     def from_dict(cls, data: Dict) -> "ReminderIntent":
         """Create from dictionary."""
@@ -181,7 +181,7 @@ class ReminderIntent:
 class Procedure:
     """
     A procedural memory - step-by-step workflow for task execution.
-    
+
     Stored in Supabase Postgres with pgvector embeddings for semantic retrieval.
     Represents "how-to" knowledge that guides the agent through multi-step tasks.
     """
@@ -194,7 +194,7 @@ class Procedure:
     examples: Optional[List[str]] = field(default_factory=list)
     category: Optional[str] = None
     similarity: Optional[float] = None  # Populated during retrieval
-    
+
     def to_dict(self) -> Dict:
         """Convert to dictionary for JSON serialization."""
         return {
@@ -208,7 +208,7 @@ class Procedure:
             "category": self.category,
             "similarity": self.similarity,
         }
-    
+
     @classmethod
     def from_dict(cls, data: Dict) -> "Procedure":
         """Create from dictionary."""
@@ -223,23 +223,23 @@ class Procedure:
             category=data.get("category"),
             similarity=data.get("similarity"),
         )
-    
+
     def format_steps(self) -> str:
         """
         Format steps as a numbered list for display to LLM or user.
-        
+
         Returns:
             Human-readable step-by-step guide
         """
         if not self.steps:
             return "No steps defined."
-        
+
         lines = [f"**{self.name}**: {self.description}", ""]
-        
+
         if self.context_when:
             lines.append(f"**When to use**: {self.context_when}")
             lines.append("")
-        
+
         lines.append("**Steps**:")
         for i, step in enumerate(self.steps, 1):
             action = step.get("action", "")
@@ -250,11 +250,11 @@ class Procedure:
                 lines.append(f"{i}. {desc}")
             else:
                 lines.append(f"{i}. {action}")
-        
+
         if self.conditions:
             lines.append("")
             lines.append(f"**Conditions**: {self.conditions}")
-        
+
         return "\n".join(lines)
 
 
@@ -317,14 +317,14 @@ class LongTermStore(Protocol):
 
 
 class Embedder(Protocol):
-    """Text embedder protocol — wraps embedding model for consistent interface."""
+    """Text embedder protocol - wraps embedding model for consistent interface."""
 
     def embed(self, texts: List[str]) -> List[List[float]]:
         ...
 
 
 class Clock(Protocol):
-    """Clock abstraction — allows fast-forwarding time in tests."""
+    """Clock abstraction - allows fast-forwarding time in tests."""
 
     def now(self) -> float:
         ...

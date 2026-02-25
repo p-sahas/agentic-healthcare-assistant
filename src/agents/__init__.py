@@ -1,5 +1,5 @@
 """
-Agentic Routing Engine — the core agent module.
+Agentic Routing Engine - the core agent module.
 
 Public API:
     build_agent()        → AgentOrchestrator (fully wired, ready to chat)

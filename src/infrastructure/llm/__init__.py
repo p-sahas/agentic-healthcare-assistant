@@ -1,5 +1,5 @@
 """
-LLM provider wrappers — 3-model architecture.
+LLM provider wrappers - 3-model architecture.
 
   get_router_llm()     → gpt-4o-mini (routing)
   get_extractor_llm()  → llama-3.1-8b-instant via Groq (extraction)

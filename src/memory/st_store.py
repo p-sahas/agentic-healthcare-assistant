@@ -1,5 +1,5 @@
 """
-Short-term memory store — Supabase backend.
+Short-term memory store - Supabase backend.
 
 Implements a ring buffer with TTL for recent conversation turns.
 Turns are stored in the ``st_turns`` table in Supabase PostgreSQL.
@@ -77,7 +77,8 @@ class ShortTermMemoryStore:
                 }
             )
             session.commit()
-            logger.debug("Appended turn to ST: {}/{}", turn.user_id, turn.session_id)
+            logger.debug("Appended turn to ST: {}/{}",
+                         turn.user_id, turn.session_id)
         except Exception as e:
             session.rollback()
             logger.error("Failed to append turn to Supabase: {}", e)
@@ -109,7 +110,8 @@ class ShortTermMemoryStore:
                     content=row.content,
                     user_id=user_id,
                     session_id=session_id,
-                    ts=row.created_at.timestamp() if hasattr(row.created_at, 'timestamp') else time.time()
+                    ts=row.created_at.timestamp() if hasattr(
+                        row.created_at, 'timestamp') else time.time()
                 )
                 turns.append(turn)
             return turns

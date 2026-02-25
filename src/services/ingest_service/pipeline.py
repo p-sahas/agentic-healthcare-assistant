@@ -1,5 +1,5 @@
 """
-Qdrant ingestion pipeline — load, chunk, embed, upsert.
+Qdrant ingestion pipeline - load, chunk, embed, upsert.
 
 This module contains the core service logic for ingesting documents
 into Qdrant Cloud.  Scripts (``scripts/ingest_to_qdrant.py``) and CLI
@@ -55,7 +55,8 @@ def load_kb_docs(kb_dir: Path | None = None) -> List[Dict[str, Any]]:
     """Load internal knowledge-base markdown documents."""
     kb_dir = Path(kb_dir or KB_DIR)
     if not kb_dir.exists():
-        raise FileNotFoundError(f"Knowledge-base directory not found: {kb_dir}")
+        raise FileNotFoundError(
+            f"Knowledge-base directory not found: {kb_dir}")
 
     docs: List[Dict[str, Any]] = []
     for md_file in sorted(kb_dir.glob("*.md")):
@@ -68,7 +69,8 @@ def load_kb_docs(kb_dir: Path | None = None) -> List[Dict[str, Any]]:
         url = f"internal://nawaloka/{doc_slug}"
         docs.append({"url": url, "title": title, "content": content})
 
-    logger.info("Loaded {} knowledge-base documents from {}", len(docs), kb_dir)
+    logger.info("Loaded {} knowledge-base documents from {}",
+                len(docs), kb_dir)
     return docs
 
 
@@ -141,7 +143,7 @@ def embed_texts(
 
     total_batches = (len(texts) + batch_size - 1) // batch_size
     for i in range(0, len(texts), batch_size):
-        batch = texts[i : i + batch_size]
+        batch = texts[i: i + batch_size]
         batch_num = i // batch_size + 1
         logger.info(
             "Embedding batch {}/{} ({} texts)...",
@@ -205,7 +207,7 @@ def run_ingest(
     logger.info("🚀 QDRANT INGESTION PIPELINE")
     logger.info("=" * 70)
 
-    # ── 1. Load documents ────────────────────────────────────
+    #  1. Load documents
     loader = LOADER_MAP.get(source)
     if loader is None:
         raise ValueError(
@@ -218,7 +220,7 @@ def run_ingest(
         logger.error(" No documents loaded. Nothing to ingest.")
         sys.exit(1)
 
-    # ── 2. Chunk ─────────────────────────────────────────────
+    #  2. Chunk ─
     logger.info(f"\n  Chunking (strategy={strategy})...")
     chunk_fn = STRATEGY_MAP.get(strategy)
     if chunk_fn is None:
@@ -228,10 +230,12 @@ def run_ingest(
 
     if strategy == "parent_child":
         children, parents = chunk_fn(docs)
-        logger.info(f"   → {len(children)} child chunks, {len(parents)} parent chunks")
+        logger.info(
+            f"   → {len(children)} child chunks, {len(parents)} parent chunks")
         parent_lookup = _build_parent_lookup(parents)
         chunks = _enrich_children_with_parent_text(children, parent_lookup)
-        logger.info("   → Each child enriched with parent_text for richer LLM context")
+        logger.info(
+            "   → Each child enriched with parent_text for richer LLM context")
     else:
         chunks = chunk_fn(docs)
         logger.info(f"   --> {len(chunks)} chunks created")
@@ -240,7 +244,7 @@ def run_ingest(
         logger.error(" No chunks produced. Check your documents.")
         sys.exit(1)
 
-    # ── 3. Embed ─────────────────────────────────────────────
+    #  3. Embed ─
     logger.info(f"\n Embedding {len(chunks)} chunks...")
     texts = [c["text"] for c in chunks]
     t0 = time.time()
@@ -248,7 +252,7 @@ def run_ingest(
     embed_secs = time.time() - t0
     logger.success(f"   --> Embedding done in {embed_secs:.1f}s")
 
-    # ── 4. Create / recreate collection ──────────────────────
+    #  4. Create / recreate collection
     if recreate:
         logger.info(f"\n  Recreating collection '{QDRANT_COLLECTION_NAME}'...")
         try:
@@ -258,14 +262,14 @@ def run_ingest(
 
     ensure_collection()
 
-    # ── 5. Upsert ────────────────────────────────────────────
+    #  5. Upsert
     logger.info(f"\n  Upserting {len(chunks)} points into Qdrant...")
     t0 = time.time()
     n = upsert_chunks(chunks, embeddings)
     upsert_secs = time.time() - t0
     logger.info(f"   → Upserted {n} points in {upsert_secs:.1f}s")
 
-    # ── 6. Verify ────────────────────────────────────────────
+    #  6. Verify
     logger.info("\n Collection info:")
     info = collection_info()
     for k, v in info.items():
@@ -277,7 +281,8 @@ def run_ingest(
     logger.info(f"   Strategy: {strategy}")
     logger.info(f"   Chunks indexed: {n}")
     if strategy == "parent_child":
-        logger.info("   Parent context: Stored in payload for richer LLM generation")
+        logger.info(
+            "   Parent context: Stored in payload for richer LLM generation")
     logger.info("=" * 70)
 
     return n

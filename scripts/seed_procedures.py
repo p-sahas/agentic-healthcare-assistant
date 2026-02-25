@@ -4,6 +4,11 @@ Seed procedural memory with common healthcare workflows.
 If ``sql/06_procedures.sql`` exists, loads from that file (deterministic).  Otherwise falls back to inline definitions.
 """
 
+from infrastructure.db import create_tables
+from memory.procedural_store import ProceduralMemoryStore
+from infrastructure.log import setup_logging
+from loguru import logger
+from dotenv import load_dotenv
 import sys
 from pathlib import Path
 
@@ -11,13 +16,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 # Load environment variables
-from dotenv import load_dotenv
 load_dotenv()
 
-from loguru import logger
-from infrastructure.log import setup_logging
-from memory.procedural_store import ProceduralMemoryStore
-from infrastructure.db import create_tables
 
 PROJECT_ROOT = Path(__file__).parent.parent
 SQL_SEED_FILE = PROJECT_ROOT / "sql" / "06_procedures.sql"
@@ -28,7 +28,7 @@ def _seed_from_sql() -> bool:
     if not SQL_SEED_FILE.exists():
         return False
 
-    logger.info("📂 Found sql/06_procedures.sql — loading deterministic data")
+    logger.info("📂 Found sql/06_procedures.sql - loading deterministic data")
 
     try:
         from sqlalchemy import text
@@ -56,9 +56,10 @@ def _seed_from_sql() -> bool:
                     row_count += 1
             conn.commit()
 
-        logger.info(f"  ✅ mem_procedures: {row_count} rows loaded from sql/06_procedures.sql")
+        logger.info(
+            f"  ✅ mem_procedures: {row_count} rows loaded from sql/06_procedures.sql")
 
-        # ── Backfill embeddings (SQL file doesn't include them) ───
+        #  Backfill embeddings (SQL file doesn't include them) ─
         _backfill_embeddings(engine)
 
         return True
@@ -85,7 +86,8 @@ def _backfill_embeddings(engine) -> None:
             logger.info("  ✅ All procedures already have embeddings")
             return
 
-        logger.info(f"  🔄 Backfilling embeddings for {len(rows)} procedures...")
+        logger.info(
+            f"  🔄 Backfilling embeddings for {len(rows)} procedures...")
         for row in rows:
             embed_text = f"{row.description}. Context: {row.context_when or 'General'}"
             embedding = embedder.embed_query(embed_text)
@@ -113,37 +115,39 @@ def seed_procedure_if_not_exists(store, name, **kwargs):
 
 def seed_procedures():
     """Seed common healthcare procedures."""
-    
+
     logger.info("🌱 Seeding procedural memory...")
-    
+
     # Ensure tables exist (only if Supabase is configured)
     try:
         create_tables()
         logger.info("✅ Tables verified/created")
     except ValueError as e:
         logger.error(f"❌ Supabase not configured: {e}")
-        logger.info("💡 Please set SUPABASE_DB_URL in your .env file to use procedural memory")
+        logger.info(
+            "💡 Please set SUPABASE_DB_URL in your .env file to use procedural memory")
         return
-    
-    # ── Try SQL-first (deterministic) ──────────────────────────
+
+    #  Try SQL-first (deterministic)
     if _seed_from_sql():
         logger.info("🎯 Procedural memory ready (from SQL)!")
         return
-    
-    # ── Fallback: inline definitions ───────────────────────────
-    logger.info("⚙️  No SQL seed file — using inline definitions")
-    
+
+    #  Fallback: inline definitions ─
+    logger.info("⚙️  No SQL seed file - using inline definitions")
+
     try:
         store = ProceduralMemoryStore()
     except Exception as e:
         logger.error(f"❌ Failed to initialize ProceduralMemoryStore: {e}")
-        logger.info("💡 Make sure Supabase is configured and pgvector extension is enabled")
+        logger.info(
+            "💡 Make sure Supabase is configured and pgvector extension is enabled")
         return
-    
+
     # =========================================================================
     # 1. BOOK NEW APPOINTMENT
     # =========================================================================
-    
+
     seed_procedure_if_not_exists(
         store,
         name="book_new_appointment",
@@ -209,14 +213,14 @@ def seed_procedures():
             "Patient: I want to schedule a checkup at the main hospital"
         ]
     )
-    
+
     # =========================================================================
     # 2. RESCHEDULE EXISTING APPOINTMENT
     # =========================================================================
-    
+
     seed_procedure_if_not_exists(
 
-    
+
         store,
         name="reschedule_appointment",
         description="Reschedule an existing appointment to a new date/time",
@@ -291,14 +295,14 @@ def seed_procedures():
             "Patient: Something came up, I can't make it tomorrow"
         ]
     )
-    
+
     # =========================================================================
     # 3. CANCEL APPOINTMENT
     # =========================================================================
-    
+
     seed_procedure_if_not_exists(
 
-    
+
         store,
         name="cancel_appointment",
         description="Cancel an existing appointment",
@@ -361,14 +365,14 @@ def seed_procedures():
             "Patient: I can't make it to my appointment"
         ]
     )
-    
+
     # =========================================================================
     # 4. CHECK APPOINTMENT STATUS
     # =========================================================================
-    
+
     seed_procedure_if_not_exists(
 
-    
+
         store,
         name="check_appointment_status",
         description="Look up and provide status of patient's appointments",
@@ -412,14 +416,14 @@ def seed_procedures():
             "Patient: Show me my appointment history"
         ]
     )
-    
+
     # =========================================================================
     # 5. FIND A DOCTOR
     # =========================================================================
-    
+
     seed_procedure_if_not_exists(
 
-    
+
         store,
         name="find_doctor",
         description="Help patient find a suitable doctor by specialty or name",
@@ -461,14 +465,14 @@ def seed_procedures():
             "Patient: Who are your pediatricians in Colombo?"
         ]
     )
-    
+
     # =========================================================================
     # 6. UPDATE PATIENT INFORMATION
     # =========================================================================
-    
+
     seed_procedure_if_not_exists(
 
-    
+
         store,
         name="update_patient_info",
         description="Update patient's personal information in CRM",
@@ -525,19 +529,18 @@ def seed_procedures():
             "Patient: I moved to a new address"
         ]
     )
-    
+
     logger.info("✅ Seeded 6 common healthcare procedures")
-    
+
     # List all procedures
     all_procs = store.list_all_procedures()
     logger.info(f"\n📋 Procedures in database:")
     for proc in all_procs:
         logger.info(f"  - {proc.name} ({proc.category}): {proc.description}")
-    
+
     logger.info("\n🎯 Procedural memory ready!")
 
 
 if __name__ == "__main__":
     setup_logging()
     seed_procedures()
-

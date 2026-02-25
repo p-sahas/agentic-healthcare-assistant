@@ -1,5 +1,5 @@
 """
-Chat LLM providers — 3-model architecture.
+Chat LLM providers - 3-model architecture.
 
 Three specialised LLMs for different tasks:
   - Router:    gpt-4o-mini via OpenRouter (reliable JSON output)
@@ -31,7 +31,7 @@ def _build_llm(
     max_tokens: Optional[int] = None,
     **kwargs: Any,
 ) -> ChatOpenAI:
-    """Internal factory — builds a ChatOpenAI for any provider."""
+    """Internal factory - builds a ChatOpenAI for any provider."""
     llm_kwargs: dict[str, Any] = dict(
         model=model,
         temperature=temperature,

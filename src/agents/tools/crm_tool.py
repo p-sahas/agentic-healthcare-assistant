@@ -1,12 +1,12 @@
 """
-CRM Tool — Patient lookup, doctor search, booking CRUD.
+CRM Tool - Patient lookup, doctor search, booking CRUD.
 
 Exposes 5 actions for the routing engine:
-  1. lookup_patient   — find patient by phone/name/ID
-  2. search_doctors   — search doctors by specialty/location/availability
-  3. create_booking   — book a new appointment
-  4. cancel_booking   — cancel an existing booking
-  5. reschedule_booking — change date/time of an existing booking
+  1. lookup_patient   - find patient by phone/name/ID
+  2. search_doctors   - search doctors by specialty/location/availability
+  3. create_booking   - book a new appointment
+  4. cancel_booking   - cancel an existing booking
+  5. reschedule_booking - change date/time of an existing booking
 
 All actions return plain-text summaries for the synthesiser LLM.
 """
@@ -29,6 +29,8 @@ from infrastructure.db.crm_models import (
     Specialty,
 )
 from infrastructure.observability import observe, update_current_observation
+
+
 class CRMTool:
     """
     CRM tool for the routing-engine agent.
@@ -40,7 +42,7 @@ class CRMTool:
     def __init__(self) -> None:
         self.engine = get_sql_engine()
 
-    # helpers 
+    # helpers
 
     def _session(self):
         """Create a new SQLAlchemy session."""
@@ -73,7 +75,8 @@ class CRMTool:
             if patient_id:
                 query = query.filter(Patient.patient_id == patient_id)
             elif external_user_id:
-                query = query.filter(Patient.external_user_id == external_user_id)
+                query = query.filter(
+                    Patient.external_user_id == external_user_id)
             elif phone:
                 query = query.filter(Patient.phone == phone)
             elif name:
@@ -101,7 +104,8 @@ class CRMTool:
                         and_(
                             Booking.patient_id == pat.patient_id,
                             Booking.start_at >= now_epoch,
-                            Booking.status.in_(["PENDING", "CONFIRMED", "RESCHEDULED"]),
+                            Booking.status.in_(
+                                ["PENDING", "CONFIRMED", "RESCHEDULED"]),
                         )
                     )
                     .order_by(Booking.start_at)
@@ -132,7 +136,7 @@ class CRMTool:
         finally:
             session.close()
 
-    # 2. search_doctors 
+    # 2. search_doctors
 
     def search_doctors(
         self,
@@ -191,7 +195,7 @@ class CRMTool:
         finally:
             session.close()
 
-    # 3. create_booking 
+    # 3. create_booking
 
     def create_booking(
         self,
@@ -371,7 +375,8 @@ class CRMTool:
                     and_(
                         Booking.doctor_id == booking.doctor_id,
                         Booking.booking_id != booking_id,
-                        Booking.status.in_(["PENDING", "CONFIRMED", "RESCHEDULED"]),
+                        Booking.status.in_(
+                            ["PENDING", "CONFIRMED", "RESCHEDULED"]),
                         Booking.start_at < new_end_epoch,
                         Booking.end_at > new_start_epoch,
                     )
@@ -409,7 +414,7 @@ class CRMTool:
         finally:
             session.close()
 
-    #  dispatch 
+    #  dispatch
 
     @observe(name="crm_dispatch")
     def dispatch(self, action: str, params: Dict[str, Any]) -> str:

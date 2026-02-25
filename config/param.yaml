@@ -8,10 +8,10 @@ provider:
   # Which provider to use: "openrouter" (recommended) or "openai"
   # OpenRouter gives you access to ALL providers with one API key
   default: openrouter
-  
+
   # Model tier to use: "general", "strong", or "reason"
   tier: general
-  
+
   # OpenRouter base URL
   openrouter_base_url: https://openrouter.ai/api/v1
 
@@ -41,23 +41,23 @@ chunking:
   fixed:
     chunk_size: 800
     chunk_overlap: 100
-  
+
   # Semantic chunking
   semantic:
     max_chunk_size: 1000
     min_chunk_size: 200
-  
+
   # Sliding-window chunking
   sliding:
     window_size: 512
     stride_size: 256
-  
+
   # Parent-child chunking
   parent_child:
     parent_size: 1200
     child_size: 250
     child_overlap: 50
-  
+
   # Late chunking
   late:
     base_size: 1000
@@ -72,17 +72,17 @@ retrieval:
   similarity_threshold: 0.7
 
 # ============================================================================
-# CAG (Cache-Augmented Generation) — Qdrant Semantic Vector Cache
+# CAG (Cache-Augmented Generation) - Qdrant Semantic Vector Cache
 # ============================================================================
 # Cache lives in a dedicated Qdrant collection (separate from RAG KB).
 # Lookups embed the query and do KNN-1 cosine search; a HIT is declared
 # when cosine_similarity ≥ similarity_threshold.
 # TTL is enforced at read time (entries older than cache_ttl are skipped).
 cag:
-  collection_name: cag_cache          # Qdrant collection for cached entries
-  similarity_threshold: 0.90          # 0.90-0.95 recommended for paraphrases
-  cache_ttl: 86400                    # TTL per entry in seconds (24h). 0 = no expiry
-  max_cache_size: 1000                # Informational limit
+  collection_name: cag_cache # Qdrant collection for cached entries
+  similarity_threshold: 0.90 # 0.90-0.95 recommended for paraphrases
+  cache_ttl: 86400 # TTL per entry in seconds (24h). 0 = no expiry
+  max_cache_size: 1000 # Informational limit
 
 # ============================================================================
 # CRAG (Corrective RAG)
@@ -114,15 +114,15 @@ paths:
 # ============================================================================
 logging:
   enabled: true
-  level: INFO  # DEBUG, INFO, WARNING, ERROR
+  level: INFO # DEBUG, INFO, WARNING, ERROR
   log_tokens: true
   log_latency: true
 
 # ============================================================================
-# Observability — LangFuse Tracing
+# Observability - LangFuse Tracing
 # ============================================================================
 observability:
-  enabled: true   # Set false to disable all tracing (zero overhead)
+  enabled: true # Set false to disable all tracing (zero overhead)
 
 # ============================================================================
 # Qdrant Cloud Configuration

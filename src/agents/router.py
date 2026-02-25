@@ -1,5 +1,5 @@
 """
-Query Router — LLM-based intent classification.
+Query Router - LLM-based intent classification.
 
 Takes a user message + memory context and returns a ``RouteDecision``
 that tells the orchestrator which tool to invoke and with what params.
@@ -129,7 +129,7 @@ class QueryRouter:
             return self.llm.model
         return "unknown"
 
-    # ── parsing ───────────────────────────────────────────────
+    #  parsing ─
 
     def _parse_response(self, raw: str) -> RouteDecision:
         """
@@ -149,7 +149,8 @@ class QueryRouter:
         start = text.find("{")
         end = text.rfind("}")
         if start == -1 or end == -1:
-            logger.warning("Router output is not JSON; falling back to direct.")
+            logger.warning(
+                "Router output is not JSON; falling back to direct.")
             return RouteDecision(
                 route="direct",
                 confidence=0.0,
@@ -157,7 +158,7 @@ class QueryRouter:
             )
 
         try:
-            data = json.loads(text[start : end + 1])
+            data = json.loads(text[start: end + 1])
         except json.JSONDecodeError as exc:
             logger.warning("Router JSON parse error: {}", exc)
             return RouteDecision(
@@ -169,7 +170,8 @@ class QueryRouter:
         # Validate
         route = data.get("route", "direct")
         if route not in VALID_ROUTES:
-            logger.warning("Invalid route '{}'; falling back to direct.", route)
+            logger.warning(
+                "Invalid route '{}'; falling back to direct.", route)
             route = "direct"
 
         action = data.get("action")

@@ -1,5 +1,5 @@
 """
-Ingest services — web crawling, document chunking, Qdrant pipeline.
+Ingest services - web crawling, document chunking, Qdrant pipeline.
 """
 
 from .chunkers import (

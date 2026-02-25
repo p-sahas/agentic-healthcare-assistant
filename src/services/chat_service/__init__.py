@@ -1,5 +1,5 @@
 """
-Chat services — RAG, CAG (cached), CRAG (corrective).
+Chat services - RAG, CAG (cached), CRAG (corrective).
 """
 
 from .rag_service import RAGService, build_rag_chain, QdrantRetriever

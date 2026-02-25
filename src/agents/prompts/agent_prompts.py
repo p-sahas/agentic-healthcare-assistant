@@ -3,7 +3,7 @@ Prompt templates for the routing-engine agent.
 
 Prompts are fetched from **LangFuse Prompt Management** at runtime.
 If a prompt hasn't been created in LangFuse yet, the local fallback
-(defined below) is used instead — so the system works out-of-the-box.
+(defined below) is used instead - so the system works out-of-the-box.
 
 To manage prompts via LangFuse Cloud:
   1. Open LangFuse → Prompts → + New Prompt
@@ -12,9 +12,9 @@ To manage prompts via LangFuse Cloud:
   4. Set a version to "production" to make it active
 
 Three prompt roles:
-  1. ROUTER      — classifies user intent → route + params
-  2. SYNTHESISER — merges tool output + memory context → final answer
-  3. SYSTEM      — base persona injected into every LLM call
+  1. ROUTER      - classifies user intent → route + params
+  2. SYNTHESISER - merges tool output + memory context → final answer
+  3. SYSTEM      - base persona injected into every LLM call
 """
 
 from infrastructure.observability import fetch_prompt
@@ -32,7 +32,7 @@ LANGFUSE_PROMPT_NAMES = {
 }
 
 
-# 1. SYSTEM — Base agent persona (fallback)
+# 1. SYSTEM - Base agent persona (fallback)
 
 
 _AGENT_SYSTEM_FALLBACK = """\
@@ -56,7 +56,7 @@ Communication rules:
 """
 
 
-# 2. ROUTER — Intent classification (fallback)
+# 2. ROUTER - Intent classification (fallback)
 
 
 _ROUTER_SYSTEM_FALLBACK = """\
@@ -66,10 +66,10 @@ Given a user message AND memory context, classify the intent into
 exactly ONE primary route (or DIRECT if no tool is needed).
 
 ROUTES:
-  crm        — Patient lookup, doctor search, booking, cancellation, rescheduling.
-  rag        — Hospital policies, services, departments, procedures (internal KB).
-  web_search — Real-time info: hours, directions, traffic, current announcements.
-  direct     — Greeting, chitchat, follow-up, or answerable from memory alone.
+  crm        - Patient lookup, doctor search, booking, cancellation, rescheduling.
+  rag        - Hospital policies, services, departments, procedures (internal KB).
+  web_search - Real-time info: hours, directions, traffic, current announcements.
+  direct     - Greeting, chitchat, follow-up, or answerable from memory alone.
 
 For CRM you must also extract the sub-action:
   lookup_patient | search_doctors | create_booking | cancel_booking | reschedule_booking
@@ -106,7 +106,7 @@ USER MESSAGE:
 Classify and extract (JSON):"""
 
 
-# 3. SYNTHESISER — Final response generation (fallback)
+# 3. SYNTHESISER - Final response generation (fallback)
 
 
 _SYNTHESISER_SYSTEM_FALLBACK = """\
@@ -141,7 +141,7 @@ USER MESSAGE:
 Compose your reply:"""
 
 
-# Prompt builders — fetch from LangFuse, fall back to local
+# Prompt builders - fetch from LangFuse, fall back to local
 
 
 def build_router_prompt(
@@ -182,7 +182,7 @@ def build_synthesiser_prompt(
         fallback=_SYNTHESISER_USER_FALLBACK,
         memory_context=memory_context or "(no memory context)",
         route=route,
-        tool_output=tool_output or "(no tool output — direct response)",
+        tool_output=tool_output or "(no tool output - direct response)",
         user_message=user_message,
     )
     combined_system = agent_system + "\n\n" + synth_system

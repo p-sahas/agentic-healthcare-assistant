@@ -1,5 +1,5 @@
 """
-Agent prompt templates — router, synthesiser, system persona.
+Agent prompt templates - router, synthesiser, system persona.
 
 Prompts are fetched from LangFuse Prompt Management at runtime.
 Local fallbacks are defined in 'agent_prompts.py'.

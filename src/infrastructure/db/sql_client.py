@@ -1,5 +1,5 @@
 """
-SQL client — canonical SQLAlchemy engine and session for Supabase PostgreSQL.
+SQL client - canonical SQLAlchemy engine and session for Supabase PostgreSQL.
 
 Provides:
 - Singleton engine backed by SUPABASE_DB_URL
@@ -45,54 +45,63 @@ metadata = MetaData()
 mem_facts_table = Table(
     "mem_facts",
     metadata,
-    Column("id", UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")),
+    Column("id", UUID(as_uuid=True), primary_key=True,
+           server_default=text("gen_random_uuid()")),
     Column("user_id", Text, nullable=False, index=True),
     Column("text", Text, nullable=False),
-    Column("embedding", Vector(EMBEDDING_DIM), nullable=True),  # pgvector column
+    Column("embedding", Vector(EMBEDDING_DIM),
+           nullable=True),  # pgvector column
     Column("score", Float, nullable=False),
     Column("tags", JSONB, nullable=False, server_default=text("'[]'::jsonb")),
-    Column("created_at", DateTime(timezone=True), nullable=False, server_default=text("NOW()")),
-    Column("last_used_at", DateTime(timezone=True), nullable=True, server_default=text("NOW()")),
+    Column("created_at", DateTime(timezone=True),
+           nullable=False, server_default=text("NOW()")),
+    Column("last_used_at", DateTime(timezone=True),
+           nullable=True, server_default=text("NOW()")),
     Column("ttl_at", DateTime(timezone=True), nullable=True),
     Column("pin", Boolean, nullable=False, server_default=text("FALSE")),
-    Column("deleted", Boolean, nullable=False, server_default=text("FALSE"), index=True),
+    Column("deleted", Boolean, nullable=False,
+           server_default=text("FALSE"), index=True),
 )
 
 # Memory episodes table (Long-term episodic memory)
 mem_episodes_table = Table(
     "mem_episodes",
     metadata,
-    Column("id", UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")),
+    Column("id", UUID(as_uuid=True), primary_key=True,
+           server_default=text("gen_random_uuid()")),
     Column("user_id", Text, nullable=False, index=True),
     Column("session_id", Text, nullable=False, index=True),
     Column("summary", Text, nullable=False),
-    Column("summary_embedding", Vector(EMBEDDING_DIM), nullable=True),  # pgvector column
-    Column("topic_tags", JSONB, nullable=False, server_default=text("'[]'::jsonb")),
+    Column("summary_embedding", Vector(EMBEDDING_DIM),
+           nullable=True),  # pgvector column
+    Column("topic_tags", JSONB, nullable=False,
+           server_default=text("'[]'::jsonb")),
     Column("start_at", DateTime(timezone=True), nullable=False),
     Column("end_at", DateTime(timezone=True), nullable=False),
     Column("turn_count", Integer, nullable=False),
     Column("turns", JSONB, nullable=False),  # Full conversation as JSON
-    Column("created_at", DateTime(timezone=True), nullable=False, server_default=text("NOW()")),
+    Column("created_at", DateTime(timezone=True),
+           nullable=False, server_default=text("NOW()")),
 )
 
 
 def get_sql_engine():
     """
     Get SQLAlchemy engine for Supabase PostgreSQL.
-    
+
     Returns:
         SQLAlchemy engine
     """
     global _engine
     if _engine is None:
         db_url = os.getenv("SUPABASE_DB_URL")
-        
+
         if not db_url:
             raise ValueError(
                 "SUPABASE_DB_URL must be set in .env file. "
                 "Format: postgresql://postgres:[password]@db.xxxxx.supabase.co:5432/postgres"
             )
-        
+
         _engine = create_engine(
             db_url,
             pool_size=5,
@@ -108,21 +117,22 @@ def get_sql_engine():
 def get_session():
     """
     Get SQLAlchemy session for Supabase.
-    
+
     Returns:
         SQLAlchemy session
     """
     global _SessionLocal
     if _SessionLocal is None:
         engine = get_sql_engine()
-        _SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
+        _SessionLocal = sessionmaker(
+            bind=engine, autocommit=False, autoflush=False)
     return _SessionLocal()
 
 
 def create_tables():
     """
     Create database tables if they don't exist.
-    
+
     Note: In production with Supabase, tables should be created via SQL Editor
     using sql/supabase_schema.sql for full pgvector support and RLS policies.
     """
@@ -134,7 +144,7 @@ def create_tables():
 def test_connection():
     """
     Test Supabase database connection.
-    
+
     Returns:
         True if connection successful, False otherwise
     """

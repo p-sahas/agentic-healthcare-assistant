@@ -1,5 +1,5 @@
 """
-Cache-Augmented Generation (CAG) — semantic vector cache backed by Qdrant.
+Cache-Augmented Generation (CAG) - semantic vector cache backed by Qdrant.
 
 Architecture:
     Uses a dedicated Qdrant collection (``cag_cache``) separate from the
@@ -21,7 +21,7 @@ How it works:
 Why Qdrant over Redis Stack:
     - Standard Redis Cloud (free tier) does NOT include the RediSearch
       module required for FT.CREATE / FT.SEARCH vector search.
-    - Qdrant Cloud is already provisioned for RAG — adding a second
+    - Qdrant Cloud is already provisioned for RAG - adding a second
       collection is zero-cost and requires no extra infrastructure.
     - Same sub-millisecond HNSW vector search, same cosine metric.
 
@@ -43,7 +43,7 @@ from typing import Any, Dict, List, Optional
 from loguru import logger
 
 
-# Defaults 
+# Defaults
 
 _DEFAULT_COLLECTION = "cag_cache"
 
@@ -123,12 +123,12 @@ class CAGCache:
             )
         except Exception as exc:
             logger.warning(
-                "CAG cache DISABLED — Qdrant unavailable: {}. "
+                "CAG cache DISABLED - Qdrant unavailable: {}. "
                 "All lookups will miss; every query runs full RAG.",
                 exc,
             )
 
-    #collection management 
+    # collection management
 
     def _create_collection(self) -> None:
         """Create the Qdrant collection for CAG cache."""
@@ -148,7 +148,7 @@ class CAGCache:
             self.dim,
         )
 
-    # public API 
+    # public API
 
     def get(self, query: str) -> Optional[Dict[str, Any]]:
         """
@@ -162,7 +162,7 @@ class CAGCache:
 
         Returns:
             Dict with ``query``, ``answer``, ``evidence_urls``, ``ts``,
-            ``score`` — or ``None`` on miss.
+            ``score`` - or ``None`` on miss.
         """
         if not self._available:
             return None
@@ -209,7 +209,8 @@ class CAGCache:
 
         evidence_raw = payload.get("evidence_urls", "[]")
         try:
-            evidence_urls = json.loads(evidence_raw) if isinstance(evidence_raw, str) else evidence_raw
+            evidence_urls = json.loads(evidence_raw) if isinstance(
+                evidence_raw, str) else evidence_raw
         except (json.JSONDecodeError, TypeError):
             evidence_urls = []
 
@@ -252,9 +253,11 @@ class CAGCache:
         try:
             self._client.upsert(
                 collection_name=self.collection_name,
-                points=[PointStruct(id=point_id, vector=query_vec, payload=payload)],
+                points=[PointStruct(
+                    id=point_id, vector=query_vec, payload=payload)],
             )
-            logger.debug("CAG cache SET: '{}' → point={}", query[:60], point_id)
+            logger.debug("CAG cache SET: '{}' → point={}",
+                         query[:60], point_id)
         except Exception as exc:
             logger.warning("CAG cache SET error: {}", exc)
 
@@ -270,7 +273,8 @@ class CAGCache:
 
         try:
             self._client.delete_collection(self.collection_name)
-            logger.info("Dropped CAG cache collection '{}'", self.collection_name)
+            logger.info("Dropped CAG cache collection '{}'",
+                        self.collection_name)
         except Exception:
             pass  # Collection may not exist
 
@@ -294,7 +298,7 @@ class CAGCache:
             "available": self._available,
         }
 
-    #  internal helpers 
+    #  internal helpers
 
     def _count(self) -> int:
         """Return number of cached entries."""
@@ -306,7 +310,7 @@ class CAGCache:
         except Exception:
             return 0
 
-    # dunder helpers 
+    # dunder helpers
 
     def __len__(self) -> int:
         return self._count()

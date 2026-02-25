@@ -1,5 +1,5 @@
 # =============================================================================
-# NAWALOKA HOSPITAL — KNOWN FAQs (Internal Knowledge Base)
+# NAWALOKA HOSPITAL - KNOWN FAQs (Internal Knowledge Base)
 # =============================================================================
 # These FAQs are pre-loaded into the semantic CAG cache at agent startup.
 # Run 'rag_tool.warm_cache(queries)' to generate + cache responses.

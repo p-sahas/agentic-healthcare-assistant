@@ -1,5 +1,5 @@
 """
-Agent tools — CRM, Web Search, and RAG.
+Agent tools - CRM, Web Search, and RAG.
 
 Each tool exposes a ``dispatch(action, params)`` method so the
 orchestrator can call them uniformly.

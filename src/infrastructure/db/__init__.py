@@ -2,8 +2,8 @@
 Database clients for the Agentic Memory system.
 
 2-tier storage architecture:
-     Warm  — Qdrant Cloud  → RAG KB vectors + CAG semantic cache
-     Cold  — Supabase PG   → ST Memory + LT Memory (pgvector) + CRM (relational)
+     Warm  - Qdrant Cloud  → RAG KB vectors + CAG semantic cache
+     Cold  - Supabase PG   → ST Memory + LT Memory (pgvector) + CRM (relational)
 """
 
 from .sql_client import get_sql_engine, create_tables, get_session

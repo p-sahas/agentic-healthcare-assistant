@@ -12,6 +12,8 @@ from sqlalchemy import select, update, and_, text
 from memory.schemas import MemoryFact, ReminderIntent
 from memory.policies import apply_decay, should_prune
 from infrastructure.db.sql_client import mem_facts_table, get_session
+
+
 def _to_datetime(timestamp: float | None) -> datetime | None:
     """Convert Unix timestamp to datetime for PostgreSQL."""
     if timestamp is None:
@@ -22,14 +24,14 @@ def _to_datetime(timestamp: float | None) -> datetime | None:
 class LongTermMemoryStore:
     """
     Long-term memory store (Supabase Postgres + pgvector).
-    
+
     Stores distilled facts with metadata and embeddings.
     Uses pgvector for semantic search.
     """
-    
+
     def __init__(self, embedder):
         self.embedder = embedder
-    
+
     # Cosine similarity threshold for cross-run deduplication.
     # If a new fact is ≥ this similar to an existing DB fact, we
     # bump the existing fact's score instead of inserting a duplicate.
@@ -61,7 +63,7 @@ class LongTermMemoryStore:
             for fact, embedding in zip(facts_list, embeddings):
                 embedding_str = str(embedding)
 
-                # ── Semantic dedup: check if a near-identical fact exists ──
+                #  Semantic dedup: check if a near-identical fact exists
                 existing = session.execute(
                     text("""
                         SELECT id::text,
@@ -130,12 +132,12 @@ class LongTermMemoryStore:
             raise
         finally:
             session.close()
-    
+
     def query(self, user_id: str, query_text: str, k: int, threshold: float) -> List[MemoryFact]:
         """Query long-term memory with semantic search using pgvector."""
         query_embedding = self.embedder.embed_query(query_text)
         session = get_session()
-        
+
         try:
             embedding_str = str(query_embedding)
             query_sql = text("""
@@ -158,14 +160,15 @@ class LongTermMemoryStore:
                 ORDER BY embedding <=> CAST(:embedding AS vector)
                 LIMIT :k
             """)
-            
+
             # IVFFlat with few rows needs higher probes to avoid missing results
             session.execute(text("SET ivfflat.probes = 10"))
             results = session.execute(
                 query_sql,
-                {"embedding": embedding_str, "user_id": user_id, "threshold": threshold, "k": k}
+                {"embedding": embedding_str, "user_id": user_id,
+                    "threshold": threshold, "k": k}
             ).fetchall()
-            
+
             facts = []
             for row in results:
                 fact = MemoryFact(
@@ -180,15 +183,16 @@ class LongTermMemoryStore:
                     pin=row.pin,
                 )
                 facts.append(fact)
-            
-            logger.info(f"Retrieved {len(facts)} facts from LT memory for user {user_id}")
+
+            logger.info(
+                f"Retrieved {len(facts)} facts from LT memory for user {user_id}")
             return facts
         except Exception as e:
             logger.error(f"Failed to query facts: {e}")
             raise
         finally:
             session.close()
-    
+
     def get_all_facts(self, user_id: str) -> List[MemoryFact]:
         """Get all non-deleted facts for a user."""
         session = get_session()
@@ -201,7 +205,7 @@ class LongTermMemoryStore:
                     )
                 )
             ).fetchall()
-            
+
             facts = []
             for row in results:
                 fact = MemoryFact(
@@ -219,7 +223,7 @@ class LongTermMemoryStore:
             return facts
         finally:
             session.close()
-    
+
     def soft_delete(self, fact_id: str) -> None:
         """Soft-delete a fact (mark as deleted without removing)."""
         session = get_session()
@@ -237,7 +241,7 @@ class LongTermMemoryStore:
             raise
         finally:
             session.close()
-    
+
     def prune(self, user_id: str) -> int:
         """Prune expired/low-value facts for a user."""
         session = get_session()
@@ -252,7 +256,7 @@ class LongTermMemoryStore:
             return pruned_count
         finally:
             session.close()
-    
+
     def update_scores(self, user_id: str) -> None:
         """Apply temporal decay to all fact scores."""
         session = get_session()

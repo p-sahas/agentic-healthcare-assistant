@@ -11,11 +11,11 @@ from infrastructure.config import EMBEDDING_DIM, EMBEDDING_MODEL
 def generate_supabase_schema() -> str:
     """
     Generate Supabase schema DDL dynamically from config.
-    
+
     Returns:
         SQL DDL string with vector dimensions from config.EMBEDDING_DIM
     """
-    
+
     return f"""-- ============================================================================
 -- Supabase Schema: Memory System + CRM
 -- PostgreSQL 15+ with pgvector extension
@@ -35,7 +35,7 @@ CREATE EXTENSION IF NOT EXISTS vector;
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- ============================================================================
--- SHORT-TERM MEMORY (Supabase backend — ring buffer with TTL)
+-- SHORT-TERM MEMORY (Supabase backend - ring buffer with TTL)
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS st_turns (
@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS st_turns (
 CREATE INDEX IF NOT EXISTS idx_st_turns_user_session ON st_turns (user_id, session_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_st_turns_ttl ON st_turns (ttl_at) WHERE ttl_at IS NOT NULL;
 
-COMMENT ON TABLE st_turns IS 'Short-term conversation memory — ring buffer with TTL';
+COMMENT ON TABLE st_turns IS 'Short-term conversation memory - ring buffer with TTL';
 
 -- ============================================================================
 -- LONG-TERM SEMANTIC MEMORY (pgvector facts)
@@ -425,7 +425,7 @@ ORDER BY b.start_at;
 -- ============================================================================
 
 COMMENT ON TABLE mem_facts IS 'Long-term semantic memory facts with pgvector embeddings';
-COMMENT ON TABLE mem_episodes IS 'Long-term episodic memory — full conversations with pgvector summaries';
+COMMENT ON TABLE mem_episodes IS 'Long-term episodic memory - full conversations with pgvector summaries';
 COMMENT ON TABLE patients IS 'CRM patient records';
 COMMENT ON TABLE doctors IS 'CRM doctor records';
 COMMENT ON TABLE bookings IS 'CRM appointment bookings';

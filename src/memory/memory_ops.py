@@ -1,5 +1,5 @@
 """
-Memory operations — distill, recall, forget.
+Memory operations - distill, recall, forget.
 
 Three core operations on the memory system:
 - Distill: Extract long-term facts from conversation turns (write path)
@@ -22,7 +22,7 @@ from infrastructure.observability import observe, update_current_observation
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Distiller — write path
+# Distiller - write path
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
@@ -68,7 +68,8 @@ class MemoryDistiller:
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ])
-            content = response.content if hasattr(response, "content") else str(response)
+            content = response.content if hasattr(
+                response, "content") else str(response)
 
             # Extract token usage if available
             usage = {}
@@ -99,14 +100,16 @@ class MemoryDistiller:
             tags = fact_data.get("tags", [])
             if not text:
                 continue
-            score = score_memory_fact(text=text, created_at=now, now=now, repetition_count=1)
+            score = score_memory_fact(
+                text=text, created_at=now, now=now, repetition_count=1)
             fact = MemoryFact(
                 id=fact_id, user_id=user_id, text=text, score=score,
                 tags=tags, created_at=now, last_used_at=now, ttl_at=None, pin=False,
             )
             facts.append(fact)
 
-        embedder = self.lt_store.embedder if hasattr(self.lt_store, 'embedder') else None
+        embedder = self.lt_store.embedder if hasattr(
+            self.lt_store, 'embedder') else None
         facts = dedupe_facts(facts, embedder=embedder)
         if facts:
             self.lt_store.upsert(facts)
@@ -130,7 +133,7 @@ class MemoryDistiller:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Recaller — read path
+# Recaller - read path
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
@@ -158,7 +161,8 @@ class MemoryRecaller:
             user_id=user_id, query_text=query, k=k_lt, threshold=LT_SIM_THRESHOLD,
         )
 
-        st_turns_filtered, lt_facts_filtered = self._budget_tokens(st_turns, lt_facts, max_tokens)
+        st_turns_filtered, lt_facts_filtered = self._budget_tokens(
+            st_turns, lt_facts, max_tokens)
 
         update_current_observation(
             input=query,
@@ -203,7 +207,8 @@ class MemoryRecaller:
             if len(lt_filtered) >= 3:
                 break
 
-        logger.debug(f"Token budget: ST={st_tokens}/{st_budget}, LT={lt_tokens}/{lt_budget}")
+        logger.debug(
+            f"Token budget: ST={st_tokens}/{st_budget}, LT={lt_tokens}/{lt_budget}")
         return st_filtered, lt_filtered
 
     def format_context(self, st_turns: List[ConversationTurn], lt_facts: List[MemoryFact]) -> str:
@@ -225,7 +230,7 @@ class MemoryRecaller:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Forget service — cleanup path
+# Forget service - cleanup path
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
