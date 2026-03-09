@@ -1,113 +1,182 @@
 # =============================================================================
-# NAWALOKA HOSPITAL - KNOWN FAQs (Internal Knowledge Base)
+# NAWALOKA HOSPITAL — KNOWN FAQs (Internal Knowledge Base)
 # =============================================================================
 # These FAQs are pre-loaded into the semantic CAG cache at agent startup.
-# Run 'rag_tool.warm_cache(queries)' to generate + cache responses.
+# Run `rag_tool.warm_cache(queries)` to generate + cache responses.
 #
 # Benefits:
 # - Instant responses for common questions (sub-1ms, $0)
 # - Semantic matching catches paraphrases (cosine ≥ 0.90)
 # - Cache stored in Qdrant (dedicated cag_cache collection, HNSW COSINE)
+# - Answers are hardcoded to ensure 100% accuracy and bypass LLM generation.
 # =============================================================================
 
 # Staff & HR Policies
 staff:
-  - "What are the working hours and shift timings at Nawaloka Hospital?"
-  - "What is the leave policy for permanent employees?"
-  - "How many sick days do employees get?"
-  - "What is the maternity leave entitlement?"
-  - "What is the dress code for clinical staff?"
-  - "What are the employee medical benefits?"
-  - "What is the disciplinary process at Nawaloka?"
+  - query: "What are the working hours and shift timings at Nawaloka Hospital?"
+    answer: "Nawaloka Hospital clinical staff work in three main shifts: Morning (07:00-15:00), Evening (14:30-22:30), and Night (22:00-07:30). Administrative staff typically work Monday to Friday from 08:30 to 17:00."
+  - query: "What is the leave policy for permanent employees?"
+    answer: "Permanent employees are entitled to 14 days of Annual Leave, 21 days of Casual Leave/Sick Leave, and 84 working days of Maternity Leave. All leaves must be applied via the HRMS portal with at least 48 hours notice for planned absences."
+  - query: "How many sick days do employees get?"
+    answer: "Employees are entitled to 21 days of combined Casual and Sick Leave per annum. Medical certificates are required for sick leave exceeding 2 consecutive days."
+  - query: "What is the maternity leave entitlement?"
+    answer: "Female employees are entitled to 84 working days (approx. 14 weeks) of fully paid Maternity Leave, excluding statutory holidays and weekends."
+  - query: "What is the dress code for clinical staff?"
+    answer: "Clinical staff must wear hospital-issued scrubs or uniforms with closed-toe, fluid-resistant shoes. Hair must be tied back, and dangling jewelry is prohibited. ID badges must be visible at all times."
+  - query: "What are the employee medical benefits?"
+    answer: "Employees receive free OPD consultations, subsidized indoor admissions, and comprehensive health insurance coverage up to LKR 1,000,000 per annum, including dependents."
+  - query: "What is the disciplinary process at Nawaloka?"
+    answer: "The disciplinary process involves verbal warnings, written warnings (up to three), suspension pending inquiry, and potential termination, depending on the severity of the misconduct as per the HR handbook."
 
 # Clinical Protocols
 clinical:
-  - "What is the patient admission process?"
-  - "How does the triage system work in the emergency department?"
-  - "What is the ISBAR handover protocol?"
-  - "What is the discharge process for inpatients?"
-  - "What are the five rights of medication administration?"
-  - "What is the surgical safety checklist?"
-  - "What is the blood transfusion protocol?"
+  - query: "What is the patient admission process?"
+    answer: "Patients arrive via OPD, Emergency, or planned admission. The admission desk verifies identity and insurance, initiates the EMR file, and escorts the patient to the ward, where nursing staff perform the initial assessment."
+  - query: "How does the triage system work in the emergency department?"
+    answer: "The Emergency Department uses a 5-level triage system: Resuscitation (immediate), Emergent (within 15 mins), Urgent (within 30 mins), Less Urgent (within 1 hr), and Non-Urgent (within 2 hrs)."
+  - query: "What is the ISBAR handover protocol?"
+    answer: "All clinical handovers must follow the ISBAR format: Identify (patient details), Situation (current problem), Background (brief history), Assessment (current vital signs/findings), and Recommendation (what needs to be done)."
+  - query: "What is the discharge process for inpatients?"
+    answer: "Discharge is initiated by the consultant's written order. Nursing staff prepares a discharge summary, pharmacy prepares take-home medications, and billing finalizing the invoice. Patients are briefed on post-discharge care before leaving."
+  - query: "What are the five rights of medication administration?"
+    answer: "Nurses must verify the Five Rights before administering any medication: Right Patient, Right Drug, Right Dose, Right Route, and Right Time."
+  - query: "What is the surgical safety checklist?"
+    answer: "The WHO Surgical Safety Checklist is mandatory for all procedures. It involves three stages: Sign-in (before induction of anesthesia), Time-out (before skin incision), and Sign-out (before the patient leaves the operating room)."
+  - query: "What is the blood transfusion protocol?"
+    answer: "Blood transfusions require two RNs to independently verify patient ID, blood type, and component expiry against the doctor's order at the bedside before starting the transfusion. Vitals must be monitored at 15 mins, 30 mins, and hourly."
 
 # Emergency Procedures
 emergency:
-  - "What is the Code Blue procedure for cardiac arrest?"
-  - "What should staff do in case of a fire emergency?"
-  - "What is the Code Orange mass casualty protocol?"
-  - "What happens during a power failure at the hospital?"
-  - "What are the fire extinguisher types and their uses?"
+  - query: "What is the Code Blue procedure for cardiac arrest?"
+    answer: "Code Blue signifies a cardiac or respiratory arrest. Upon discovering an unresponsive patient, staff must call 5555, state 'Code Blue' and the location. Start CPR immediately. The resuscitation team aims to arrive within 3 minutes."
+  - query: "What should staff do in case of a fire emergency?"
+    answer: "In a fire emergency, activate the nearest fire alarm (Code Red). Use the RACE protocol: Rescue anyone in immediate danger, Alarm (call 4444), Contain the fire (close doors), and Extinguish/Evacuate."
+  - query: "What is the Code Orange mass casualty protocol?"
+    answer: "Code Orange is activated for external mass casualties. All off-duty ER staff are recalled, elective surgeries are canceled, and the triage area is expanded to the main lobby to handle the influx of patients."
+  - query: "What happens during a power failure at the hospital?"
+    answer: "In the event of a power failure, backup generators automatically start within 10 seconds. Critical equipment in ICUs and ORs are supported by UPS bridge power. Non-essential lighting will remain off."
+  - query: "What are the fire extinguisher types and their uses?"
+    answer: "Water extinguishers (Red) for combustible materials (wood, paper). CO2 extinguishers (Black) for electrical fires. Dry Powder (Blue) for flammable liquids and gases."
+  - query: "What is the emergency evacuation procedure at the hospital?"
+    answer: "The emergency evacuation procedure requires staff to calmly guide patients to the nearest exit stairwell (do not use elevators), assisting mobility-impaired patients using evacuation chairs. Assembly points are marked in the main car park."
 
 # Infection Control
 infection_control:
-  - "What is the hand hygiene policy?"
-  - "What PPE is required for airborne precautions?"
-  - "How many negative pressure isolation rooms does Nawaloka have?"
-  - "What is the cleaning protocol for patient rooms?"
-  - "What is the needlestick injury protocol?"
-  - "How does the antibiotic stewardship programme work?"
+  - query: "What is the hand hygiene policy?"
+    answer: "Staff must perform hand hygiene following the WHO '5 Moments': before patient contact, before aseptic tasks, after bodily fluid exposure, after patient contact, and after contact with patient surroundings."
+  - query: "What PPE is required for airborne precautions?"
+    answer: "Airborne precautions require an N95 respirator (fit-tested), gloves, gown, and eye protection (goggles or face shield) before entering the patient's negative-pressure isolation room."
+  - query: "How many negative pressure isolation rooms does Nawaloka have?"
+    answer: "Nawaloka Hospital has 12 dedicated negative pressure isolation rooms across the medical wards and ICU for patients with airborne infectious diseases."
+  - query: "What is the cleaning protocol for patient rooms?"
+    answer: "Standard room cleaning uses 1000 ppm hypochlorite solution. Terminal cleaning (after patient discharge) involves a deep clean followed by UV light disinfection or hydrogen peroxide vapor logging."
+  - query: "What is the needlestick injury protocol?"
+    answer: "Immediately wash the wound with soap and water (do not squeeze). Report the incident to the supervisor and Infection Control team immediately. Proceed to ER for post-exposure prophylaxis (PEP) assessment within 2 hours."
+  - query: "How does the antibiotic stewardship programme work?"
+    answer: "The program restricts the use of broad-spectrum antibiotics. Restricted antibiotics require approval from an infectious disease specialist or clinical microbiologist within 48 hours of empirical starting."
 
 # Patient Safety
 patient_safety:
-  - "How is patient identification verified?"
-  - "What are the high-alert medications at Nawaloka?"
-  - "What is the fall prevention programme?"
-  - "How are medication errors reported?"
-  - "What is the Braden Scale for pressure injury risk?"
-  - "How does incident reporting work?"
+  - query: "How is patient identification verified?"
+    answer: "Patient identity must be verified using two identifiers (Full Name and Date of Birth or Patient ID number) against the wristband before any medication, blood test, or procedure."
+  - query: "What are the high-alert medications at Nawaloka?"
+    answer: "High-alert medications include Insulin, Opiates/Narcotics, Injectable Potassium Chloride/Phosphate, Intravenous Anticoagulants (Heparin), and Chemotherapeutic agents. These require independent double-checks."
+  - query: "What is the fall prevention programme?"
+    answer: "All admitted patients undergo a Morse Fall Scale assessment. High-risk patients receive a yellow wristband, bed alarms are activated, and non-slip footwear is provided."
+  - query: "How are medication errors reported?"
+    answer: "Medication errors must be reported immediately to the attending physician to manage patient safety, followed by an incident report submitted via the internal portal within 24 hours for root-cause analysis."
+  - query: "What is the Braden Scale for pressure injury risk?"
+    answer: "The Braden Scale assesses a patient's risk of developing pressure ulcers based on sensory perception, moisture, activity, mobility, nutrition, and friction/shear. Scores under 18 trigger preventive protocols."
+  - query: "How does incident reporting work?"
+    answer: "Any adverse event, near miss, or hazard must be documented in the online Incident Reporting System. Reports are non-punitive and reviewed by the Quality Assurance committee to improve systemic safety."
 
 # Cardiology
 cardiology:
-  - "What cardiology services does Nawaloka offer?"
-  - "What is the STEMI door-to-balloon time target?"
-  - "How does the cardiac rehabilitation programme work?"
-  - "What tests are available in the non-invasive cardiology lab?"
-  - "What is the heart failure management pathway?"
+  - query: "What cardiology services does Nawaloka offer?"
+    answer: "Nawaloka Cardiology offers 24/7 emergency PCI, CABG surgery, echocardiograms, stress testing, holter monitoring, pacemaker insertion, and cardiac rehabilitation."
+  - query: "What is the STEMI door-to-balloon time target?"
+    answer: "The target 'door-to-balloon' time for patients arriving with an acute ST-elevation myocardial infarction (STEMI) is less than 90 minutes to ensure rapid reperfusion."
+  - query: "How does the cardiac rehabilitation programme work?"
+    answer: "The 12-week program includes supervised exercise training, dietary counseling, stress management, and medication adherence education for post-MI and post-CABG patients."
+  - query: "What tests are available in the non-invasive cardiology lab?"
+    answer: "The non-invasive lab offers ECG, 2D/3D Transthoracic Echocardiography, Transesophageal Echocardiography (TEE), Treadmill Stress Tests, and 24-hour ambulatory BP/Holter monitoring."
+  - query: "What is the heart failure management pathway?"
+    answer: "The pathway involves multidisciplinary care aimed at optimizing Guideline-Directed Medical Therapy (GDMT), fluid management, patient education on daily weights, and early post-discharge follow-up."
 
 # Radiology
 radiology:
-  - "What imaging equipment does Nawaloka have?"
-  - "What preparation is needed for an MRI scan?"
-  - "What is the contrast reaction management protocol?"
-  - "What are the MRI safety contraindications?"
-  - "How long does it take to get a radiology report?"
+  - query: "What imaging equipment does Nawaloka have?"
+    answer: "The radiology department is equipped with a 3 Tesla MRI, 128-slice CT scanner, Digital X-ray, Ultrasound with Doppler, Fluoroscopy, and a DEXA bone density scanner."
+  - query: "What preparation is needed for an MRI scan?"
+    answer: "Patients must complete a safety screening questionnaire. Metallic objects, jewelry, and credit cards must be removed. Fasting for 4-6 hours may be required if contrast is to be administered."
+  - query: "What is the contrast reaction management protocol?"
+    answer: "In the event of an allergic reaction to contrast media, the scan is immediately stopped. The radiologist administers epinephrine, antihistamines, and oxygen as per the anaphylaxis protocol. The crash cart is always on standby."
+  - query: "What are the MRI safety contraindications?"
+    answer: "Absolute contraindications for MRI include cardiac pacemakers (unless MRI-conditional), cochlear implants, certain aneurysm clips, and metallic fragments in the eyes."
+  - query: "How long does it take to get a radiology report?"
+    answer: "Routine X-ray and Ultrasound reports are finalized within 2-4 hours. CT and MRI reports take 12-24 hours. Urgent scans (STAT orders) are reported verbally to the physician within 30 minutes."
 
 # Laboratory
 laboratory:
-  - "What are the lab turnaround times?"
-  - "What are the blood specimen tube colours and their uses?"
-  - "What are the critical lab values that require immediate notification?"
-  - "How does the blood bank manage emergency blood requests?"
-  - "What quality control measures does the laboratory follow?"
+  - query: "What are the lab turnaround times?"
+    answer: "Routine biochemistry and hematology results are available within 4 hours. Microbiology cultures take 48-72 hours. STAT test results are guaranteed within 1 hour."
+  - query: "What are the blood specimen tube colours and their uses?"
+    answer: "Purple (EDTA) for FBC, Light Blue (Citrate) for coagulation (PT/INR), Red (Serum) for biochemistry/immunology, and Grey (Fluoride/Oxalate) for glucose testing."
+  - query: "What are the critical lab values that require immediate notification?"
+    answer: "Critical values include Potassium < 2.5 or > 6.0 mmol/L, Glucose < 40 or > 400 mg/dL, and Platelets < 20,000. The lab MUST phone the clinical area within 15 minutes of verifying a critical result."
+  - query: "How does the blood bank manage emergency blood requests?"
+    answer: "For uncrossmatched emergency blood ('O Negative' protocol), 2 units can be issued within 5 minutes. Fully crossmatched blood requires 45-60 minutes."
+  - query: "What quality control measures does the laboratory follow?"
+    answer: "The laboratory runs daily internal QC samples before patient testing and participates in recognized External Quality Assurance (EQA) programs like RIQAS or RCPA."
 
 # Pharmacy
 pharmacy:
-  - "What are the pharmacy operating hours?"
-  - "How are controlled substances managed?"
-  - "What is the therapeutic drug monitoring process?"
-  - "How are cytotoxic drugs handled?"
-  - "What drugs require TDM at Nawaloka?"
+  - query: "What are the pharmacy operating hours?"
+    answer: "The inpatient and outpatient pharmacies operate 24/7, including public holidays and weekends."
+  - query: "How are controlled substances managed?"
+    answer: "Controlled drugs (e.g., Morphine, Fentanyl) are kept in a double-locked safe. Administration requires a specific prescription, and a physical count is verified by two nurses at every shift change."
+  - query: "What is the therapeutic drug monitoring process?"
+    answer: "TDM involves drawing blood at specific times (peak or trough) to measure drug levels. Pharmacy adjusts dosing for narrow-therapeutic-index drugs like Vancomycin, Phenytoin, and Digoxin based on these results."
+  - query: "How are cytotoxic drugs handled?"
+    answer: "Cytotoxic drugs are prepared in a dedicated biological safety cabinet by trained oncology pharmacists wearing full protective gear, following strict hazardous drug protocols to prevent exposure."
+  - query: "What drugs require TDM at Nawaloka?"
+    answer: "Drugs requiring TDM at Nawaloka include Aminoglycosides (Gentamicin/Amikacin), Vancomycin, Digoxin, Lithium, Phenytoin, and immunosuppressants like Tacrolimus."
 
 # Billing & Insurance
 billing:
-  - "What payment methods does Nawaloka accept?"
-  - "What insurance companies have direct billing agreements?"
-  - "What is the room charge for a private room?"
-  - "How much does a coronary angiogram cost?"
-  - "What is the financial hardship policy?"
+  - query: "What payment methods does Nawaloka accept?"
+    answer: "Nawaloka accepts Cash, Visa, Mastercard, AMEX, and direct bank transfers. Cheques are not accepted for OPD services or final inpatient bill settlements."
+  - query: "What insurance companies have direct billing agreements?"
+    answer: "We have direct billing (cashless) agreements with Sri Lanka Insurance, Ceylinco, Softlogic Life, AIA, and Allianz. Pre-authorization is required at admission."
+  - query: "What is the room charge for a private room?"
+    answer: "Standard private rooms cost LKR 15,000 per day. Semi-luxury rooms are LKR 25,000/day, and VIP Suites are LKR 45,000/day. ICU beds are billed at LKR 35,000/day."
+  - query: "How much does a coronary angiogram cost?"
+    answer: "A standard elective coronary angiogram package costs approximately LKR 85,000, which includes the procedure, day-ward stay, and medical supplies."
+  - query: "What is the financial hardship policy?"
+    answer: "Patients demonstrating severe financial hardship can apply for a discount or installment plan via the Medical Social Worker department, subject to management approval."
 
 # Data Privacy
 privacy:
-  - "What is the data privacy policy?"
-  - "How is patient data classified?"
-  - "What is the break-the-glass procedure for EMR access?"
-  - "How long are patient records retained?"
-  - "What happens in case of a data breach?"
+  - query: "What is the data privacy policy?"
+    answer: "Nawaloka Hospital complies with the Personal Data Protection Act. Patient records are confidential and only accessed by authorized staff directly involved in the patient's care."
+  - query: "How is patient data classified?"
+    answer: "Patient data is classified as Highly Sensitive Personal Health Information (PHI). It cannot be shared via unsecured platforms like WhatsApp or personal email."
+  - query: "What is the break-the-glass procedure for EMR access?"
+    answer: "In emergencies, clinicians can use the 'Break-the-Glass' feature to bypass access restrictions and view a patient's full EMR. This triggers an immediate audit log review by the Privacy Officer."
+  - query: "How long are patient records retained?"
+    answer: "Electronic medical records are kept indefinitely. Physical records for adults are retained for 10 years post-discharge; obstetric and pediatric records are retained for 21 years."
+  - query: "What happens in case of a data breach?"
+    answer: "Any suspected data breach must be reported to the IT Security Officer immediately. The hospital will contain the breach, notify affected patients within 72 hours, and report to regulatory authorities."
 
 # Training
 training:
-  - "What is the new employee orientation programme?"
-  - "What mandatory training is required annually?"
-  - "What CME requirements do doctors need to meet?"
-  - "What simulation training facilities are available?"
-  - "What nursing specialisation courses does Nawaloka offer?"
+  - query: "What is the new employee orientation programme?"
+    answer: "All new hires undergo a 3-day general orientation covering hospital policies, safety protocols, infection control, and customer service, followed by a department-specific induction."
+  - query: "What mandatory training is required annually?"
+    answer: "Annual mandatory training includes Basic Life Support (BLS), Fire Safety and Evacuation, Infection Control, and Data Privacy updates."
+  - query: "What CME requirements do doctors need to meet?"
+    answer: "Consultants and Medical Officers must complete a minimum of 50 Continuing Medical Education (CME) credit hours per year to maintain their privileges at Nawaloka Hospital."
+  - query: "What simulation training facilities are available?"
+    answer: "The Clinical Training Centre features high-fidelity adult and pediatric manikins for Code Blue simulations, airway management training, and trauma resuscitation drills."
+  - query: "What nursing specialisation courses does Nawaloka offer?"
+    answer: "Through the Nursing Training School, we offer 6-month post-basic certification courses in Critical Care Nursing, Operating Theatre Technique, and Midwifery."

@@ -106,13 +106,20 @@ class CAGService:
 
         return result
 
-    def warm_cache(self, queries: List[str]) -> int:
-        """Pre-populate cache with common queries via CRAG pipeline."""
+    def warm_cache(self, queries: List[Any]) -> int:
+        """Pre-populate cache with common queries via CRAG pipeline or hardcoded answers."""
         cached_count = 0
-        for query in queries:
-            if query not in self.cache:
-                self.generate(query, use_cache=True)
-                cached_count += 1
+        for item in queries:
+            if isinstance(item, dict) and "query" in item and "answer" in item:
+                query = item["query"]
+                if query not in self.cache:
+                    self.cache.set(query, {"answer": item["answer"], "evidence_urls": []})
+                    cached_count += 1
+            elif isinstance(item, str):
+                query = item
+                if query not in self.cache:
+                    self.generate(query, use_cache=True)
+                    cached_count += 1
         return cached_count
 
     def cache_stats(self) -> Dict[str, Any]:
