@@ -19,7 +19,9 @@ from typing import Any, Dict, Optional
 import os
 import yaml
 from loguru import logger
-
+from dotenv import load_dotenv
+# Load environment variables from .env file
+load_dotenv()
 # ========================================
 # Project Paths
 # ========================================
