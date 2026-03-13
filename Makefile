@@ -6,6 +6,11 @@
         mem-dev test-all \
         demo notebooks
 
+
+VENV := .venv
+PYTHON := $(VENV)/bin/python
+PIP := $(VENV)/bin/pip
+
 # ============================================================================
 #  HELP - Show all available commands
 # ============================================================================
@@ -52,10 +57,11 @@ help:
 # ============================================================================
 
 install:
-	@echo " Installing dependencies..."
-	pip install -r requirements.txt
+	@echo " Installing dependencies with uv..."
+	uv venv $(VENV)
+	uv pip install -r requirements.txt
 	@echo " Installation complete!"
-
+	@echo " Run 'source .venv/bin/activate' to activate the environ
 # ============================================================================
 #  SUPABASE SETUP (Production Database)
 # ============================================================================

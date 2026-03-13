@@ -5,8 +5,8 @@
 # ========================================
 # Core LLM and Embedding Services
 # ========================================
-openai>=1.12.0                    # OpenAI API for GPT models and embeddings
-anthropic>=0.18.0                 # Anthropic Claude models (optional)
+openai                   # OpenAI API for GPT models and embeddings
+# anthropic>=0.18.0                 # Anthropic Claude models (optional)
 cohere>=4.47                      # Cohere for embeddings/reranking (optional)
 
 # ========================================
@@ -61,6 +61,7 @@ notebook>=7.0.0                   # Modern Jupyter notebook interface
 # ========================================
 # Utilities and Helper Libraries
 # ========================================
+dotenv
 tqdm>=4.66.0                      # Progress bars for long operations
 pandas>=2.2.0                     # Data manipulation and analysis
 numpy>=1.26.0                     # Numerical computing
