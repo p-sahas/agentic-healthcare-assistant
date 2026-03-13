@@ -28,7 +28,7 @@ def _seed_from_sql() -> bool:
     if not SQL_SEED_FILE.exists():
         return False
 
-    logger.info("📂 Found sql/06_procedures.sql - loading deterministic data")
+    logger.info(" Found sql/06_procedures.sql - loading deterministic data")
 
     try:
         from sqlalchemy import text
@@ -57,14 +57,14 @@ def _seed_from_sql() -> bool:
             conn.commit()
 
         logger.info(
-            f"  ✅ mem_procedures: {row_count} rows loaded from sql/06_procedures.sql")
+            f"   mem_procedures: {row_count} rows loaded from sql/06_procedures.sql")
 
         #  Backfill embeddings (SQL file doesn't include them) ─
         _backfill_embeddings(engine)
 
         return True
     except Exception as exc:
-        logger.error(f"❌ SQL seed failed: {exc}")
+        logger.error(f" SQL seed failed: {exc}")
         logger.info("   Falling back to inline definitions...")
         return False
 
@@ -83,11 +83,11 @@ def _backfill_embeddings(engine) -> None:
         )).fetchall()
 
         if not rows:
-            logger.info("  ✅ All procedures already have embeddings")
+            logger.info("   All procedures already have embeddings")
             return
 
         logger.info(
-            f"  🔄 Backfilling embeddings for {len(rows)} procedures...")
+            f"   Backfilling embeddings for {len(rows)} procedures...")
         for row in rows:
             embed_text = f"{row.description}. Context: {row.context_when or 'General'}"
             embedding = embedder.embed_query(embed_text)
@@ -99,49 +99,49 @@ def _backfill_embeddings(engine) -> None:
                 {"emb": str(embedding), "proc_id": str(row.id)},
             )
         conn.commit()
-        logger.info(f"  ✅ Backfilled {len(rows)} procedure embeddings")
+        logger.info(f"   Backfilled {len(rows)} procedure embeddings")
 
 
 def seed_procedure_if_not_exists(store, name, **kwargs):
     """Helper to seed a procedure only if it doesn't exist."""
     if store.get_procedure_by_name(name):
-        logger.info(f"⏭️  Skipping '{name}' - already exists")
+        logger.info(f"⏭  Skipping '{name}' - already exists")
         return None
     else:
         proc_id = store.store_procedure(name=name, **kwargs)
-        logger.info(f"✅ Added '{name}'")
+        logger.info(f" Added '{name}'")
         return proc_id
 
 
 def seed_procedures():
     """Seed common healthcare procedures."""
 
-    logger.info("🌱 Seeding procedural memory...")
+    logger.info(" Seeding procedural memory...")
 
     # Ensure tables exist (only if Supabase is configured)
     try:
         create_tables()
-        logger.info("✅ Tables verified/created")
+        logger.info(" Tables verified/created")
     except ValueError as e:
-        logger.error(f"❌ Supabase not configured: {e}")
+        logger.error(f" Supabase not configured: {e}")
         logger.info(
-            "💡 Please set SUPABASE_DB_URL in your .env file to use procedural memory")
+            " Please set SUPABASE_DB_URL in your .env file to use procedural memory")
         return
 
     #  Try SQL-first (deterministic)
     if _seed_from_sql():
-        logger.info("🎯 Procedural memory ready (from SQL)!")
+        logger.info(" Procedural memory ready (from SQL)!")
         return
 
     #  Fallback: inline definitions ─
-    logger.info("⚙️  No SQL seed file - using inline definitions")
+    logger.info("  No SQL seed file - using inline definitions")
 
     try:
         store = ProceduralMemoryStore()
     except Exception as e:
-        logger.error(f"❌ Failed to initialize ProceduralMemoryStore: {e}")
+        logger.error(f" Failed to initialize ProceduralMemoryStore: {e}")
         logger.info(
-            "💡 Make sure Supabase is configured and pgvector extension is enabled")
+            " Make sure Supabase is configured and pgvector extension is enabled")
         return
 
     # =========================================================================
@@ -530,15 +530,15 @@ def seed_procedures():
         ]
     )
 
-    logger.info("✅ Seeded 6 common healthcare procedures")
+    logger.info(" Seeded 6 common healthcare procedures")
 
     # List all procedures
     all_procs = store.list_all_procedures()
-    logger.info(f"\n📋 Procedures in database:")
+    logger.info(f"\n Procedures in database:")
     for proc in all_procs:
         logger.info(f"  - {proc.name} ({proc.category}): {proc.description}")
 
-    logger.info("\n🎯 Procedural memory ready!")
+    logger.info("\n Procedural memory ready!")
 
 
 if __name__ == "__main__":

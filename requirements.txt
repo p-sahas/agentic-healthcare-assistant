@@ -34,7 +34,7 @@ supabase>=2.3.0                   # Supabase Python client (Memory + CRM)
 psycopg2-binary>=2.9.9            # PostgreSQL adapter for Python
 pgvector>=0.2.4                   # pgvector support for memory embeddings (Supabase)
 qdrant-client>=1.9.0              # Qdrant Cloud - RAG knowledge-base vectors
-sentence-transformers>=2.3.1      # Optional: for local embeddings
+# sentence-transformers>=2.3.1      # Optional: for local embeddings
 
 # ========================================
 # Text Processing and Tokenization
