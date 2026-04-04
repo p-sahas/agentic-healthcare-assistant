@@ -9,7 +9,7 @@ description = "Agentic Memory Design - multi-memory AI assistant with routing en
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
-authors = [{ name = "Zuu Crew" }]
+authors = [{ name = "Sahas" }]
 
 dependencies = [
     #  Core LLM & Embedding Services 

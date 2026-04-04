@@ -83,6 +83,13 @@ langfuse>=2.0.0                   # LangFuse tracing, cost tracking, prompt vers
 loguru>=0.7.0                     # Structured logging (replaces stdlib logging)
 
 # ========================================
+# API Server (FastAPI)
+# ========================================
+fastapi>=0.110.0                  # Async HTTP API framework
+uvicorn[standard]>=0.27.0         # ASGI server for FastAPI
+sse-starlette>=1.8.0              # Server-Sent Events support
+
+# ========================================
 # Development Tools (Optional)
 # ========================================
 black>=24.1.0                     # Code formatting
