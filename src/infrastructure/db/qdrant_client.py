@@ -9,8 +9,8 @@ Handles:
 - Auto-ingest KB if collection is missing or empty
 
 Two collections:
-    'nawaloka'   - RAG knowledge-base chunks (persistent)
-    'cag_cache'  - CAG semantic cache (query → answer, TTL-filtered)
+    ``nawaloka``   — RAG knowledge-base chunks (persistent)
+    ``cag_cache``  — CAG semantic cache (query → answer, TTL-filtered)
 
 Memory vectors (facts, episodes) stay in Supabase pgvector.
 """
@@ -91,8 +91,7 @@ def ensure_collection(
 
     existing = [c.name for c in client.get_collections().collections]
     if collection_name in existing:
-        logger.info(
-            "Collection '{}' already exists - skipping creation.", collection_name)
+        logger.info("Collection '{}' already exists — skipping creation.", collection_name)
         return
 
     client.create_collection(
@@ -126,10 +125,8 @@ def collection_info(collection_name: str = QDRANT_COLLECTION_NAME) -> Dict[str, 
         "name": collection_name,
         "points_count": info.points_count,
         "indexed_vectors_count": info.indexed_vectors_count,
-        # type: ignore[union-attr]
-        "vector_size": info.config.params.vectors.size,
-        # type: ignore[union-attr]
-        "distance": info.config.params.vectors.distance.name,
+        "vector_size": info.config.params.vectors.size,  # type: ignore[union-attr]
+        "distance": info.config.params.vectors.distance.name,  # type: ignore[union-attr]
         "status": info.status.name,
     }
 
@@ -175,8 +172,8 @@ def upsert_chunks(
     total = 0
 
     for i in range(0, len(chunks), batch_size):
-        batch_chunks = chunks[i: i + batch_size]
-        batch_embeds = embeddings[i: i + batch_size]
+        batch_chunks = chunks[i : i + batch_size]
+        batch_embeds = embeddings[i : i + batch_size]
 
         points = []
         for chunk, vec in zip(batch_chunks, batch_embeds):
@@ -193,13 +190,11 @@ def upsert_chunks(
                 if k not in ("text", "url", "title", "strategy", "chunk_index"):
                     payload[k] = v
 
-            points.append(PointStruct(
-                id=point_id, vector=vec, payload=payload))
+            points.append(PointStruct(id=point_id, vector=vec, payload=payload))
 
         client.upsert(collection_name=collection_name, points=points)
         total += len(points)
-        logger.debug("Upserted batch {}–{} ({} points)",
-                     i, i + len(points), len(points))
+        logger.debug("Upserted batch {}–{} ({} points)", i, i + len(points), len(points))
 
     logger.info("Upserted {} points into '{}'", total, collection_name)
     return total
@@ -223,9 +218,9 @@ def search_chunks(
     Args:
         query_vector: Embedded query vector.
         top_k: Number of results to return.
-        score_threshold: Minimum cosine similarity (0-1).
+        score_threshold: Minimum cosine similarity (0–1).
         collection_name: Collection to search.
-        strategy_filter: Optional - restrict to a chunking strategy.
+        strategy_filter: Optional — restrict to a chunking strategy.
 
     Returns:
         List of dicts with keys:
@@ -274,7 +269,7 @@ def search_chunks(
 
 
 # ---------------------------------------------------------------------------
-# Convenience - count
+# Convenience — count
 # ---------------------------------------------------------------------------
 
 
@@ -293,7 +288,7 @@ def collection_exists(collection_name: str = QDRANT_COLLECTION_NAME) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# Auto-ingest - ensures the KB is populated before the agent starts
+# Auto-ingest — ensures the KB is populated before the agent starts
 # ---------------------------------------------------------------------------
 
 
@@ -305,13 +300,13 @@ def ensure_kb_ingested(
     """
     Check if the Qdrant collection has data; if not, run the ingestion pipeline.
 
-    Called automatically by 'build_agent()' so the agent always has a
-    populated knowledge base without manual 'scripts/ingest_to_qdrant.py'
+    Called automatically by ``build_agent()`` so the agent always has a
+    populated knowledge base without manual ``scripts/ingest_to_qdrant.py``
     invocations.
 
     Args:
         collection_name: Qdrant collection to check.
-        source: Document source for ingestion ('kb', 'markdown', 'jsonl').
+        source: Document source for ingestion (``kb``, ``markdown``, ``jsonl``).
         strategy: Chunking strategy (``parent_child``, ``fixed``, etc.).
     """
     try:
@@ -319,26 +314,25 @@ def ensure_kb_ingested(
             n = count_points(collection_name)
             if n > 0:
                 logger.info(
-                    " Qdrant KB ready - collection '{}' has {} points, skipping ingestion",
+                    "✓ Qdrant KB ready — collection '{}' has {} points, skipping ingestion",
                     collection_name,
                     n,
                 )
                 return
             logger.info(
-                "Collection '{}' exists but is empty - ingesting...",
+                "Collection '{}' exists but is empty — ingesting...",
                 collection_name,
             )
         else:
             logger.info(
-                "Collection '{}' not found - running KB ingestion...",
+                "Collection '{}' not found — running KB ingestion...",
                 collection_name,
             )
 
         from services.ingest_service.pipeline import run_ingest
 
         n = run_ingest(source=source, strategy=strategy, recreate=False)
-        logger.success(" KB auto-ingested: {} points into '{}'",
-                       n, collection_name)
+        logger.success("✓ KB auto-ingested: {} points into '{}'", n, collection_name)
 
     except Exception as exc:
         logger.warning(

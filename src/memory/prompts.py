@@ -1,5 +1,5 @@
 """
-Memory prompts - distillation and recall prompt templates.
+Memory prompts — distillation and recall prompt templates.
 
 Prompts are fetched from **LangFuse Prompt Management** at runtime.
 Local fallbacks below are used when the prompt hasn't been created
@@ -14,9 +14,9 @@ To manage these prompts in LangFuse Cloud:
 
 from infrastructure.observability import fetch_prompt
 
-
+# ─────────────────────────────────────────────────────────────
 # LangFuse prompt names → create these in your dashboard
-
+# ─────────────────────────────────────────────────────────────
 
 LANGFUSE_PROMPT_NAMES = {
     "distill_system": "nawaloka-distill-system",
@@ -25,9 +25,9 @@ LANGFUSE_PROMPT_NAMES = {
     "recall_user":    "nawaloka-recall-user",
 }
 
-
+# ─────────────────────────────────────────────────────────────
 # Fallback: Distillation prompts
-
+# ─────────────────────────────────────────────────────────────
 
 _DISTILL_SYSTEM_FALLBACK = """\
 You are a memory extraction specialist for a healthcare AI assistant.
@@ -98,9 +98,9 @@ Extract memorable facts from this conversation:
 
 Return JSON array of facts:"""
 
-
+# ─────────────────────────────────────────────────────────────
 # Fallback: Recall prompts
-
+# ─────────────────────────────────────────────────────────────
 
 _RECALL_SYSTEM_FALLBACK = """\
 You are a memory recall assistant.
@@ -131,7 +131,9 @@ LONG-TERM FACTS (distilled knowledge):
 Format a concise memory context (≤500 tokens):"""
 
 
-# Prompt builders - fetch from LangFuse, fall back to local
+# ─────────────────────────────────────────────────────────────
+# Prompt builders — fetch from LangFuse, fall back to local
+# ─────────────────────────────────────────────────────────────
 
 
 def build_distill_prompt(turns: list) -> tuple[str, str]:
@@ -171,7 +173,9 @@ def build_recall_prompt(
     return system_prompt, user_prompt
 
 
+# ─────────────────────────────────────────────────────────────
 # Formatting helpers (unchanged)
+# ─────────────────────────────────────────────────────────────
 
 
 def format_conversation_for_distill(turns: list) -> str:
@@ -191,8 +195,7 @@ def format_st_context(turns: list) -> str:
     lines = []
     for turn in turns:
         role = turn.role.capitalize()
-        content = turn.content[:200] + \
-            "..." if len(turn.content) > 200 else turn.content
+        content = turn.content[:200] + "..." if len(turn.content) > 200 else turn.content
         lines.append(f"[{role}] {content}")
     return "\n".join(lines)
 

@@ -1,13 +1,13 @@
 """
-Observability layer - LangFuse v3 integration for tracing, cost, and latency.
+Observability layer — LangFuse v3 integration for tracing, cost, and latency.
 
 Provides:
-- ``get_langfuse()``          - singleton Langfuse client
-- ``fetch_prompt()``          - pull prompts from LangFuse Prompt Management
-- ``observe``                 - re-exported decorator for auto-tracing
-- ``update_current_trace``    - tag traces with user_id / session_id
-- ``update_current_span``     - attach I/O + metadata to the current span
-- ``flush()``                 - ensure events are sent before process exit
+- ``get_langfuse()``          — singleton Langfuse client
+- ``fetch_prompt()``          — pull prompts from LangFuse Prompt Management
+- ``observe``                 — re-exported decorator for auto-tracing
+- ``update_current_trace``    — tag traces with user_id / session_id
+- ``update_current_span``     — attach I/O + metadata to the current span
+- ``flush()``                 — ensure events are sent before process exit
 
 Configuration:
     .env must contain:
@@ -40,8 +40,7 @@ def _is_enabled() -> bool:
         return _ENABLED
     try:
         from infrastructure.config import _get_nested, _PARAMS
-        _ENABLED = _get_nested(_PARAMS, "observability",
-                               "enabled", default=True)
+        _ENABLED = _get_nested(_PARAMS, "observability", "enabled", default=True)
     except Exception:
         _ENABLED = True
     return _ENABLED
@@ -68,8 +67,7 @@ def get_langfuse():
     _initialised = True
 
     if not _is_enabled():
-        logger.info(
-            "Observability disabled via config - LangFuse not initialised.")
+        logger.info("Observability disabled via config — LangFuse not initialised.")
         return None
 
     secret_key = os.getenv("LANGFUSE_SECRET_KEY")
@@ -99,7 +97,7 @@ def get_langfuse():
 
 
 # ---------------------------------------------------------------------------
-# Prompt Management - fetch from LangFuse with local fallback
+# Prompt Management — fetch from LangFuse with local fallback
 # ---------------------------------------------------------------------------
 
 
@@ -117,7 +115,7 @@ def fetch_prompt(
     (using ``{{variable}}`` Mustache syntax).  Otherwise the local
     ``fallback`` string is used (with Python ``{variable}`` syntax).
 
-    This lets you edit prompts live in the LangFuse dashboard - no
+    This lets you edit prompts live in the LangFuse dashboard — no
     code deploy required.
 
     Args:
@@ -139,10 +137,8 @@ def fetch_prompt(
                 type="text",
                 cache_ttl_seconds=cache_ttl_seconds,
             )
-            compiled = prompt_obj.compile(
-                **compile_vars) if compile_vars else prompt_obj.compile()
-            logger.debug("LangFuse prompt '{}' loaded (version={})",
-                         name, getattr(prompt_obj, "version", "?"))
+            compiled = prompt_obj.compile(**compile_vars) if compile_vars else prompt_obj.compile()
+            logger.debug("LangFuse prompt '{}' loaded (version={})", name, getattr(prompt_obj, "version", "?"))
             return compiled
         except Exception as exc:
             logger.debug(
@@ -151,14 +147,14 @@ def fetch_prompt(
                 exc,
             )
 
-    # Fallback - compile with Python str.format()
+    # Fallback — compile with Python str.format()
     if compile_vars:
         return fallback.format(**compile_vars)
     return fallback
 
 
 # ---------------------------------------------------------------------------
-# @observe decorator (re-export from langfuse - v3 API)
+# @observe decorator (re-export from langfuse — v3 API)
 # ---------------------------------------------------------------------------
 
 try:
@@ -167,7 +163,7 @@ try:
 except ImportError:
     _lf_observe = None
     _get_lf_client = None
-    logger.debug("langfuse package not installed - @observe is a no-op.")
+    logger.debug("langfuse package not installed — @observe is a no-op.")
 
 
 def observe(
@@ -203,7 +199,7 @@ def observe(
 
 
 # ---------------------------------------------------------------------------
-# Trace & Span Update Helpers (v3 API - uses get_client())
+# Trace & Span Update Helpers (v3 API — uses get_client())
 # ---------------------------------------------------------------------------
 
 
@@ -294,8 +290,7 @@ def update_current_observation(
         if span_kwargs:
             client.update_current_span(**span_kwargs)
     except Exception as exc:
-        logger.debug(
-            "update_current_observation failed (non-critical): {}", exc)
+        logger.debug("update_current_observation failed (non-critical): {}", exc)
 
 
 # ---------------------------------------------------------------------------

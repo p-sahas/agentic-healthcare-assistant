@@ -1,5 +1,5 @@
 """
-Web Search Tool - Tavily-powered real-time web search.
+Web Search Tool — Tavily-powered real-time web search.
 
 Used when the agent needs external, up-to-date information that
 is not available in the internal knowledge base (Qdrant/RAG).
@@ -14,8 +14,6 @@ from zoneinfo import ZoneInfo
 
 from infrastructure.config import TIMEZONE
 from infrastructure.observability import observe, update_current_observation
-
-
 class WebSearchTool:
     """
     Tavily-powered web search tool.
@@ -43,7 +41,7 @@ class WebSearchTool:
         self.prefer_domains = prefer_domains or [".lk", ".gov", ".org"]
         self.timezone = ZoneInfo(TIMEZONE)
 
-    # core search
+    # ── core search ───────────────────────────────────────────
 
     @observe(name="web_search")
     def search(
@@ -86,7 +84,7 @@ class WebSearchTool:
         if not results:
             return "No web results found for your query."
 
-        # rank & format
+        # ── rank & format ─────────────────────────────────────
         lines: List[str] = []
 
         answer = response.get("answer")
@@ -106,7 +104,7 @@ class WebSearchTool:
 
         return "\n".join(lines)
 
-    #  dispatch
+    # ── dispatch ──────────────────────────────────────────────
 
     def dispatch(self, action: str, params: Dict[str, Any]) -> str:
         """
