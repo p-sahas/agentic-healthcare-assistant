@@ -162,7 +162,7 @@ class CAGCache:
 
         Returns:
             Dict with ``query``, ``answer``, ``evidence_urls``, ``ts``,
-            ``score`` - or ``None`` on miss.
+            ``score`` — or ``None`` on miss.
         """
         if not self._available:
             return None
@@ -197,6 +197,14 @@ class CAGCache:
         if self.ttl_seconds and self.ttl_seconds > 0:
             entry_ts = payload.get("ts", 0)
             if entry_ts and (time.time() - float(entry_ts)) > self.ttl_seconds:
+                logger.debug("CAG cache expired: '{}' → deleting point {}", query[:50], hit.id)
+                try:
+                    self._client.delete(
+                        collection_name=self.collection_name,
+                        points_selector=[hit.id],
+                    )
+                except Exception as exc:
+                    logger.warning("Failed to delete expired CAG entry: {}", exc)
                 return None
 
         cached_query = payload.get("query", "")
@@ -209,8 +217,7 @@ class CAGCache:
 
         evidence_raw = payload.get("evidence_urls", "[]")
         try:
-            evidence_urls = json.loads(evidence_raw) if isinstance(
-                evidence_raw, str) else evidence_raw
+            evidence_urls = json.loads(evidence_raw) if isinstance(evidence_raw, str) else evidence_raw
         except (json.JSONDecodeError, TypeError):
             evidence_urls = []
 
@@ -242,6 +249,25 @@ class CAGCache:
 
         from qdrant_client.http.models import PointStruct
 
+        # First, search and destroy any existing entries for this exact same semantic query
+        # This prevents the cache from filling up with duplicates over time when TTL expires
+        try:
+            existing = self._client.query_points(
+                collection_name=self.collection_name,
+                query=query_vec,
+                limit=10, # Check for a few in case duplicates already exist
+                score_threshold=0.99, # practically identical queries
+            )
+            if existing.points:
+                existing_ids = [p.id for p in existing.points]
+                self._client.delete(
+                    collection_name=self.collection_name,
+                    points_selector=existing_ids,
+                )
+                logger.debug("CAG cache replaced {} existing duplicates for '{}'", len(existing_ids), query[:50])
+        except Exception as exc:
+            logger.warning("CAG cache failed to clean existing duplicates: {}", exc)
+
         point_id = str(uuid.uuid4())
         payload = {
             "query": query,
@@ -253,11 +279,9 @@ class CAGCache:
         try:
             self._client.upsert(
                 collection_name=self.collection_name,
-                points=[PointStruct(
-                    id=point_id, vector=query_vec, payload=payload)],
+                points=[PointStruct(id=point_id, vector=query_vec, payload=payload)],
             )
-            logger.debug("CAG cache SET: '{}' → point={}",
-                         query[:60], point_id)
+            logger.debug("CAG cache SET: '{}' → point={}", query[:60], point_id)
         except Exception as exc:
             logger.warning("CAG cache SET error: {}", exc)
 
@@ -273,8 +297,7 @@ class CAGCache:
 
         try:
             self._client.delete_collection(self.collection_name)
-            logger.info("Dropped CAG cache collection '{}'",
-                        self.collection_name)
+            logger.info("Dropped CAG cache collection '{}'", self.collection_name)
         except Exception:
             pass  # Collection may not exist
 

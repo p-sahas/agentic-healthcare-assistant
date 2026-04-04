@@ -19,9 +19,7 @@ from typing import Any, Dict, Optional
 import os
 import yaml
 from loguru import logger
-from dotenv import load_dotenv
-# Load environment variables from .env file
-load_dotenv()
+
 # ========================================
 # Project Paths
 # ========================================
@@ -33,7 +31,6 @@ _CONFIG_DIR = _PROJECT_ROOT / "config"
 # ========================================
 # YAML Config Loading
 # ========================================
-
 
 def _load_yaml(filename: str) -> Dict[str, Any]:
     """Load a YAML config file."""
@@ -65,12 +62,11 @@ _MODELS = _load_yaml("models.yaml")
 PROVIDER = _get_nested(_PARAMS, "provider", "default", default="openrouter")
 MODEL_TIER = _get_nested(_PARAMS, "provider", "tier", default="general")
 OPENROUTER_BASE_URL = _get_nested(_PARAMS, "provider", "openrouter_base_url",
-                                  default="https://openrouter.ai/api/v1")
+                                   default="https://openrouter.ai/api/v1")
 
 # ========================================
 # Model Names (from models.yaml)
 # ========================================
-
 
 def get_chat_model(provider: Optional[str] = None, tier: Optional[str] = None) -> str:
     """Get chat model name for specified provider and tier."""
@@ -105,9 +101,9 @@ def get_embedding_model(provider: Optional[str] = None, tier: Optional[str] = No
 # 3-Model Architecture
 # ========================================
 # Each role uses the best model for its task:
-#   Routing:    gpt-4o-mini     - reliable JSON output, fast
-#   Extraction: llama-3.1-8b    - ultra-fast via Groq, structured output
-#   Chat:       gemini-2.0-flash - high quality synthesis, generous context
+#   Routing:    gpt-4o-mini     — reliable JSON output, fast
+#   Extraction: llama-3.1-8b    — ultra-fast via Groq, structured output
+#   Chat:       gemini-2.0-flash — high quality synthesis, generous context
 
 ROUTER_MODEL = "openai/gpt-4o-mini"
 ROUTER_PROVIDER = "openrouter"
@@ -128,7 +124,7 @@ OPENAI_CHAT_MODEL = CHAT_MODEL
 # Embedding Dimensions
 # ========================================
 
-#  IMPORTANT: EMBEDDING_DIM must match the model's output dimensions
+# ⚠️ IMPORTANT: EMBEDDING_DIM must match the model's output dimensions
 #
 # Supported models:
 #   - "text-embedding-3-small"  → 1536 dims (recommended for Qdrant)
@@ -156,25 +152,19 @@ LLM_STREAMING = _get_nested(_PARAMS, "llm", "streaming", default=False)
 # Embedding Defaults
 # ========================================
 
-EMBEDDING_BATCH_SIZE = _get_nested(
-    _PARAMS, "embedding", "batch_size", default=100)
-EMBEDDING_SHOW_PROGRESS = _get_nested(
-    _PARAMS, "embedding", "show_progress", default=False)
+EMBEDDING_BATCH_SIZE = _get_nested(_PARAMS, "embedding", "batch_size", default=100)
+EMBEDDING_SHOW_PROGRESS = _get_nested(_PARAMS, "embedding", "show_progress", default=False)
 
 # ========================================
 # Project Paths (from param.yaml)
 # ========================================
 
-DATA_DIR = _PROJECT_ROOT / \
-    _get_nested(_PARAMS, "paths", "data_dir", default="data")
-KB_DIR = _PROJECT_ROOT / \
-    _get_nested(_PARAMS, "paths", "kb_dir", default="data/knowledge_base")
+DATA_DIR = _PROJECT_ROOT / _get_nested(_PARAMS, "paths", "data_dir", default="data")
+KB_DIR = _PROJECT_ROOT / _get_nested(_PARAMS, "paths", "kb_dir", default="data/knowledge_base")
 
 # Alternative ingestion sources (used by pipeline.py loader map)
 JSONL_DIR = DATA_DIR / "jsonl"
-MARKDOWN_DIR = _PROJECT_ROOT / \
-    _get_nested(_PARAMS, "paths", "markdown_dir",
-                default="data/nawaloka_markdown")
+MARKDOWN_DIR = _PROJECT_ROOT / _get_nested(_PARAMS, "paths", "markdown_dir", default="data/nawaloka_markdown")
 
 # NOTE: Both RAG KB and CAG cache live in Qdrant Cloud (separate collections).
 # NOTE: ST memory lives in Supabase (st_turns table).
@@ -184,65 +174,48 @@ MARKDOWN_DIR = _PROJECT_ROOT / \
 # ========================================
 
 # Fixed-size chunking
-FIXED_CHUNK_SIZE = _get_nested(
-    _PARAMS, "chunking", "fixed", "chunk_size", default=800)
-FIXED_CHUNK_OVERLAP = _get_nested(
-    _PARAMS, "chunking", "fixed", "chunk_overlap", default=100)
+FIXED_CHUNK_SIZE = _get_nested(_PARAMS, "chunking", "fixed", "chunk_size", default=800)
+FIXED_CHUNK_OVERLAP = _get_nested(_PARAMS, "chunking", "fixed", "chunk_overlap", default=100)
 
 # Semantic chunking
-SEMANTIC_MAX_CHUNK_SIZE = _get_nested(
-    _PARAMS, "chunking", "semantic", "max_chunk_size", default=1000)
-SEMANTIC_MIN_CHUNK_SIZE = _get_nested(
-    _PARAMS, "chunking", "semantic", "min_chunk_size", default=200)
+SEMANTIC_MAX_CHUNK_SIZE = _get_nested(_PARAMS, "chunking", "semantic", "max_chunk_size", default=1000)
+SEMANTIC_MIN_CHUNK_SIZE = _get_nested(_PARAMS, "chunking", "semantic", "min_chunk_size", default=200)
 
 # Sliding-window chunking
-SLIDING_WINDOW_SIZE = _get_nested(
-    _PARAMS, "chunking", "sliding", "window_size", default=512)
-SLIDING_STRIDE_SIZE = _get_nested(
-    _PARAMS, "chunking", "sliding", "stride_size", default=256)
+SLIDING_WINDOW_SIZE = _get_nested(_PARAMS, "chunking", "sliding", "window_size", default=512)
+SLIDING_STRIDE_SIZE = _get_nested(_PARAMS, "chunking", "sliding", "stride_size", default=256)
 
 # Parent-child chunking
-PARENT_CHUNK_SIZE = _get_nested(
-    _PARAMS, "chunking", "parent_child", "parent_size", default=1200)
-CHILD_CHUNK_SIZE = _get_nested(
-    _PARAMS, "chunking", "parent_child", "child_size", default=250)
-CHILD_OVERLAP = _get_nested(
-    _PARAMS, "chunking", "parent_child", "child_overlap", default=50)
+PARENT_CHUNK_SIZE = _get_nested(_PARAMS, "chunking", "parent_child", "parent_size", default=1200)
+CHILD_CHUNK_SIZE = _get_nested(_PARAMS, "chunking", "parent_child", "child_size", default=250)
+CHILD_OVERLAP = _get_nested(_PARAMS, "chunking", "parent_child", "child_overlap", default=50)
 
 # Late chunking
-LATE_CHUNK_BASE_SIZE = _get_nested(
-    _PARAMS, "chunking", "late", "base_size", default=1000)
-LATE_CHUNK_SPLIT_SIZE = _get_nested(
-    _PARAMS, "chunking", "late", "split_size", default=300)
-LATE_CHUNK_CONTEXT_WINDOW = _get_nested(
-    _PARAMS, "chunking", "late", "context_window", default=150)
+LATE_CHUNK_BASE_SIZE = _get_nested(_PARAMS, "chunking", "late", "base_size", default=1000)
+LATE_CHUNK_SPLIT_SIZE = _get_nested(_PARAMS, "chunking", "late", "split_size", default=300)
+LATE_CHUNK_CONTEXT_WINDOW = _get_nested(_PARAMS, "chunking", "late", "context_window", default=150)
 
 # ========================================
 # Retrieval Configuration
 # ========================================
 
 TOP_K_RESULTS = _get_nested(_PARAMS, "retrieval", "top_k", default=4)
-SIMILARITY_THRESHOLD = _get_nested(
-    _PARAMS, "retrieval", "similarity_threshold", default=0.7)
+SIMILARITY_THRESHOLD = _get_nested(_PARAMS, "retrieval", "similarity_threshold", default=0.7)
 
 # ========================================
 # CAG Configuration (Qdrant Semantic Cache)
 # ========================================
 
-CAG_COLLECTION_NAME = _get_nested(
-    _PARAMS, "cag", "collection_name", default="cag_cache")
-CAG_SIMILARITY_THRESHOLD = _get_nested(
-    _PARAMS, "cag", "similarity_threshold", default=0.90)
+CAG_COLLECTION_NAME = _get_nested(_PARAMS, "cag", "collection_name", default="cag_cache")
+CAG_SIMILARITY_THRESHOLD = _get_nested(_PARAMS, "cag", "similarity_threshold", default=0.90)
 CAG_CACHE_TTL = _get_nested(_PARAMS, "cag", "cache_ttl", default=86400)  # 24h
-CAG_CACHE_MAX_SIZE = _get_nested(
-    _PARAMS, "cag", "max_cache_size", default=1000)
+CAG_CACHE_MAX_SIZE = _get_nested(_PARAMS, "cag", "max_cache_size", default=1000)
 
 # ========================================
 # CRAG Configuration
 # ========================================
 
-CRAG_CONFIDENCE_THRESHOLD = _get_nested(
-    _PARAMS, "crag", "confidence_threshold", default=0.6)
+CRAG_CONFIDENCE_THRESHOLD = _get_nested(_PARAMS, "crag", "confidence_threshold", default=0.6)
 CRAG_EXPANDED_K = _get_nested(_PARAMS, "crag", "expanded_k", default=8)
 
 # ========================================
@@ -250,8 +223,7 @@ CRAG_EXPANDED_K = _get_nested(_PARAMS, "crag", "expanded_k", default=8)
 # ========================================
 
 CRAWL_MAX_DEPTH = _get_nested(_PARAMS, "crawling", "max_depth", default=3)
-CRAWL_DELAY_SECONDS = _get_nested(
-    _PARAMS, "crawling", "delay_seconds", default=2.0)
+CRAWL_DELAY_SECONDS = _get_nested(_PARAMS, "crawling", "delay_seconds", default=2.0)
 CRAWL_MAX_PAGES = _get_nested(_PARAMS, "crawling", "max_pages", default=100)
 
 # ========================================
@@ -273,7 +245,7 @@ LT_DECAY_HALF_LIFE_DAYS = 30
 MEM_COLLECTION = "mem_vectors"
 
 # ========================================
-# Reminders Configuration (FUTURE - not implemented in Week 07)
+# Reminders Configuration (FUTURE — not implemented in Week 07)
 # Will be re-added when reminders_service is wired in.
 # REM_TZ, REM_POLL_SECONDS, REM_DEFAULT_CHANNEL, QUIET_HOURS,
 # REMINDER_OFFSETS_SECONDS, CRM_HORIZON_DAYS
@@ -297,7 +269,6 @@ QDRANT_COLLECTION_NAME = os.getenv("QDRANT_COLLECTION_NAME", "nawaloka")
 # FAQ Loading (optional)
 # ========================================
 
-
 def load_faqs() -> list:
     """
     Load known FAQs from config/faqs.yaml (if exists).
@@ -314,7 +285,7 @@ def load_faqs() -> list:
     for category, items in faqs_config.items():
         if isinstance(items, list):
             all_faqs.extend(items)
-
+    
     return all_faqs
 
 
@@ -324,7 +295,6 @@ KNOWN_FAQS = load_faqs()
 # ========================================
 # Helper Functions
 # ========================================
-
 
 def get_api_key(provider: Optional[str] = None) -> Optional[str]:
     """Get API key for the specified provider."""
@@ -356,7 +326,7 @@ def validate() -> None:
     if not api_key:
         key_name = "OPENROUTER_API_KEY" if PROVIDER == "openrouter" else f"{PROVIDER.upper()}_API_KEY"
         raise ValueError(
-            f" Missing required secret: {key_name}\n"
+            f"❌ Missing required secret: {key_name}\n"
             f"Please add it to your .env file."
         )
 
@@ -367,7 +337,7 @@ def validate() -> None:
         try:
             dir_path.mkdir(parents=True, exist_ok=True)
         except (PermissionError, OSError) as e:
-            raise OSError(f" Cannot create directory {dir_path}: {e}")
+            raise OSError(f"❌ Cannot create directory {dir_path}: {e}")
 
 
 def dump() -> None:
@@ -376,35 +346,33 @@ def dump() -> None:
     logger.info("CONFIGURATION (NON-SECRETS ONLY)")
     logger.info("=" * 60)
 
-    logger.info("\n Provider:")
+    logger.info("\n🌐 Provider:")
     logger.info(f"   Provider: {PROVIDER}")
     logger.info(f"   Model Tier: {MODEL_TIER}")
     logger.info(f"   Chat Model: {CHAT_MODEL}")
     logger.info(f"   Embedding Model: {EMBEDDING_MODEL}")
     logger.info(f"   Embedding Dimensions: {EMBEDDING_DIM}")
 
-    logger.info("\n Directories & Storage:")
+    logger.info("\n📁 Directories & Storage:")
     logger.info(f"   Data Root: {DATA_DIR}")
     logger.info(f"   Knowledge Base: {KB_DIR}")
-    logger.info(f"    RAG Vectors: Qdrant Cloud ({QDRANT_COLLECTION_NAME})")
-    logger.info(f"    CAG Cache: Qdrant Cloud ({CAG_COLLECTION_NAME})")
-    logger.info(f"    ST + LT Memory + CRM: Supabase PostgreSQL")
+    logger.info(f"   🟡 RAG Vectors: Qdrant Cloud ({QDRANT_COLLECTION_NAME})")
+    logger.info(f"   🟡 CAG Cache: Qdrant Cloud ({CAG_COLLECTION_NAME})")
+    logger.info(f"   🟢 ST + LT Memory + CRM: Supabase PostgreSQL")
 
-    logger.info("\n Chunking:")
+    logger.info("\n🔧 Chunking:")
     logger.info(f"   Fixed Size: {FIXED_CHUNK_SIZE} tokens")
     logger.info(f"   Fixed Overlap: {FIXED_CHUNK_OVERLAP} tokens")
     logger.info(f"   Sliding Window: {SLIDING_WINDOW_SIZE} tokens")
     logger.info(f"   Sliding Stride: {SLIDING_STRIDE_SIZE} tokens")
-    logger.info(
-        f"   Parent-Child: {CHILD_CHUNK_SIZE} → {PARENT_CHUNK_SIZE} tokens")
-    logger.info(
-        f"   Late Chunk: {LATE_CHUNK_BASE_SIZE} → {LATE_CHUNK_SPLIT_SIZE} tokens")
+    logger.info(f"   Parent-Child: {CHILD_CHUNK_SIZE} → {PARENT_CHUNK_SIZE} tokens")
+    logger.info(f"   Late Chunk: {LATE_CHUNK_BASE_SIZE} → {LATE_CHUNK_SPLIT_SIZE} tokens")
 
-    logger.info("\n Retrieval:")
+    logger.info("\n🔍 Retrieval:")
     logger.info(f"   Top-K Results: {TOP_K_RESULTS}")
     logger.info(f"   Similarity Threshold: {SIMILARITY_THRESHOLD}")
 
-    logger.info("\n💾 CAG (Semantic Cache - Qdrant):")
+    logger.info("\n💾 CAG (Semantic Cache — Qdrant):")
     logger.info(f"   Collection: {CAG_COLLECTION_NAME}")
     logger.info(f"   Similarity Threshold: {CAG_SIMILARITY_THRESHOLD}")
     logger.info(f"   TTL (seconds): {CAG_CACHE_TTL}")

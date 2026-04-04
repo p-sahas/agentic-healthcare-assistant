@@ -1,49 +1,63 @@
 """
-Agent Orchestrator - main execution loop.
+Agent Orchestrator — LangGraph Multi-Agent State Machine.
 
-Flow:
-  1. Recall memory (short-term turns + long-term facts).
-  2. Route the user query (LLM → RouteDecision).
-  3. Dispatch to the selected tool (CRM / RAG / Web Search / direct).
-  4. Synthesise final answer (LLM merges tool output + memory).
-  5. Store the new conversation turn in short-term memory.
-  6. Trigger distillation if needed (extract long-term facts).
+Week 10 refactor: the Week 7 linear orchestrator is now a LangGraph StateGraph
+with multi-route fan-out support.
 
-Every step is traced via LangFuse '@observe' for full observability.
+Architecture (Supervisor-Worker pattern with fan-out):
+    recall → supervisor → [admin_agent, clinical_agent, direct_agent]  (1 or more in parallel)
+                                  ↘         ↓         ↙
+                              merge_responses  (fan-in + synthesize)
+                                      ↓
+                              save_memory → END
+
+Multi-route support:
+    When a user asks a compound question (e.g. "Check my appointments AND
+    what's the infection control policy?"), the router returns multiple
+    RouteDecisions. The supervisor fans out to the relevant agent nodes
+    in parallel via LangGraph's native fan-out. The merge_responses node
+    combines all agent outputs into one coherent answer.
+
+    For single-route queries (the common case), only one agent runs and
+    merge_responses passes through without an extra LLM call.
+
+Prompt management:
+    Sub-agent prompts (admin, clinical, direct, merge) are defined in
+    agents/prompts/agent_prompts.py with LangFuse integration + local fallbacks.
 """
 
-from loguru import logger
 import time
-from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional, Union
 
+from loguru import logger
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
+from langgraph.graph import StateGraph, END
+
+from agents.state import AgentState
+from agents.router import QueryRouter, RouteDecision, MultiRouteDecision
+from agents.prompts.agent_prompts import (
+    build_admin_agent_prompt,
+    build_clinical_agent_prompt,
+    build_direct_agent_prompt,
+    build_merge_prompt,
+)
 from memory.schemas import ConversationTurn
-from agents.prompts.agent_prompts import build_synthesiser_prompt
-from agents.router import QueryRouter, RouteDecision
 from infrastructure.observability import (
     observe,
     update_current_trace,
     update_current_observation,
-    flush,
 )
 
 
 @dataclass
 class AgentResponse:
     """
-    Complete agent response with metadata.
-
-    Attributes:
-        answer: The final text response to the user.
-        route: Which route was selected.
-        action: CRM sub-action (if route == crm).
-        tool_output: Raw tool output (for debugging).
-        memory_context: Memory context that was used.
-        latency_ms: End-to-end processing time.
+    Complete agent response with metadata for the UI/Notebooks.
     """
-
     answer: str
     route: str = "direct"
+    routes: List[str] = field(default_factory=list)   # all routes taken (multi-route)
     action: Optional[str] = None
     tool_output: str = ""
     memory_context: str = ""
@@ -52,17 +66,9 @@ class AgentResponse:
 
 class AgentOrchestrator:
     """
-    The main agent loop that ties routing, tools, memory, and synthesis together.
+    Orchestrates the multi-agent system using a LangGraph StateGraph.
 
-    Dependencies (injected via '__init__'):
-        llm          - LangChain ChatOpenAI
-        st_store     - ShortTermMemoryStore
-        lt_store     - LongTermMemoryStore
-        recaller     - MemoryRecaller
-        distiller    - MemoryDistiller
-        crm_tool     - CRMTool   (optional - None if CRM is unavailable)
-        rag_tool     - RAGTool   (optional - None if KB is empty)
-        web_tool     - WebSearchTool (optional - None if Tavily key is missing)
+    Supports both single-route and multi-route (fan-out) queries.
     """
 
     def __init__(
@@ -89,378 +95,480 @@ class AgentOrchestrator:
 
         self.router = QueryRouter(llm_router)
 
-    # public entry point
+        # Build the graph
+        self.graph = self._build_graph()
 
-    @observe(name="agent_chat")
-    def chat(
-        self,
-        user_message: str,
-        user_id: str,
-        session_id: str,
-    ) -> AgentResponse:
+    # ── Graph Construction ──────────────────────────────────────────
+
+    def _build_graph(self) -> StateGraph:
         """
-        Process a single user message through the full agent pipeline.
+        Construct the LangGraph state machine.
 
-        This is the **top-level LangFuse trace** - every sub-step
-        (recall, route, tool, synthesise) appears as a nested span.
+        Topology:
+            recall → supervisor → [admin | clinical | direct]  (fan-out)
+                                        ↘     ↓     ↙
+                                     merge_responses  (fan-in)
+                                           ↓
+                                      save_memory → END
         """
-        t0 = time.time()
+        workflow = StateGraph(AgentState)
 
-        # Tag the trace with user / session for dashboard filtering
-        update_current_trace(
-            user_id=user_id,
-            session_id=session_id,
-            tags=["agent"],
+        # 1. Define Nodes
+        workflow.add_node("recall", self.recall_node)
+        workflow.add_node("supervisor", self.supervisor_node)
+        workflow.add_node("admin_agent", self.admin_agent_node)
+        workflow.add_node("clinical_agent", self.clinical_agent_node)
+        workflow.add_node("direct_agent", self.direct_agent_node)
+        workflow.add_node("merge_responses", self.merge_responses_node)
+        workflow.add_node("save_memory", self.store_and_distill_node)
+
+        # 2. Define Edges (The Pipeline)
+        workflow.set_entry_point("recall")
+        workflow.add_edge("recall", "supervisor")
+
+        # Conditional routing from Supervisor (supports fan-out)
+        # supervisor_routing() returns str for single-route, list[str] for multi-route
+        workflow.add_conditional_edges(
+            "supervisor",
+            self.supervisor_routing,
+            {
+                "admin": "admin_agent",
+                "clinical": "clinical_agent",
+                "direct": "direct_agent"
+            }
         )
 
-        #  Step 1: Recall memory
-        memory_context = self._recall_memory(user_id, session_id, user_message)
+        # All agents converge to merge_responses (fan-in point)
+        workflow.add_edge("admin_agent", "merge_responses")
+        workflow.add_edge("clinical_agent", "merge_responses")
+        workflow.add_edge("direct_agent", "merge_responses")
 
-        #  Step 2: Route
-        decision = self.router.route(user_message, memory_context)
-        logger.info(
-            "Route: {} (action={}, conf={:.2f}) - {}",
-            decision.route,
-            decision.action,
-            decision.confidence,
-            decision.reasoning,
-        )
+        # Merge → save → end
+        workflow.add_edge("merge_responses", "save_memory")
+        workflow.add_edge("save_memory", END)
 
-        # Step 3: Dispatch to tool
-        tool_output = self._dispatch(decision)
+        return workflow.compile()
 
-        # Step 4: Synthesise final answer
-        answer = self._synthesise(
-            user_message=user_message,
-            memory_context=memory_context,
-            route=decision.route,
-            tool_output=tool_output,
-        )
+    # ── Node Implementations ────────────────────────────────────────
 
-        #  Step 5: Store turns in ST memory
-        self._store_turns(user_id, session_id, user_message, answer)
+    @observe(name="node_recall")
+    def recall_node(self, state: AgentState) -> Dict:
+        """Reads conversation history and long-term facts into the state."""
+        user_message = state["messages"][-1].content
+        user_id = state["user_id"]
+        session_id = state["session_id"]
 
-        # Step 6: Trigger distillation (background-safe)
-        self._maybe_distill(user_id, session_id)
-
-        latency_ms = int((time.time() - t0) * 1000)
-
-        # Attach final metadata to the trace
-        update_current_trace(
-            metadata={
-                "route": decision.route,
-                "action": decision.action,
-                "confidence": decision.confidence,
-                "latency_ms": latency_ms,
-            },
-        )
-
-        return AgentResponse(
-            answer=answer,
-            route=decision.route,
-            action=decision.action,
-            tool_output=tool_output,
-            memory_context=memory_context,
-            latency_ms=latency_ms,
-        )
-
-    # internal steps
-
-    @observe(name="memory_recall")
-    def _recall_memory(
-        self,
-        user_id: str,
-        session_id: str,
-        query: str,
-    ) -> str:
-        """Recall ST + LT memory and format as a context string."""
         try:
             st_turns, lt_facts = self.recaller.recall(
                 user_id=user_id,
                 session_id=session_id,
-                query=query,
+                query=user_message
             )
-            context = self.recaller.format_context(st_turns, lt_facts)
-            update_current_observation(
-                output=context[:500],
-                metadata={
-                    "st_turns": len(st_turns),
-                    "lt_facts": len(lt_facts),
-                },
-            )
-            return context
-        except Exception as exc:
-            logger.warning("Memory recall failed: {}", exc)
-            return "(memory unavailable)"
+            memory_context = self.recaller.format_context(st_turns)
+            semantic_facts = [f.to_dict() if hasattr(f, 'to_dict') else vars(f) for f in lt_facts]
 
-    @observe(name="tool_dispatch")
-    def _dispatch(self, decision: RouteDecision) -> str:
-        """Dispatch to the selected tool and return its output."""
-        route = decision.route
-        params = decision.params or {}
+            return {
+                "memory_context": memory_context,
+                "semantic_facts": semantic_facts
+            }
+        except Exception as e:
+            logger.warning(f"Recall node failed: {e}")
+            return {"memory_context": "(memory offline)"}
 
-        update_current_observation(
-            input=f"route={route} action={decision.action} params={params}",
+    @observe(name="node_supervisor")
+    def supervisor_node(self, state: AgentState) -> Dict:
+        """
+        Classifies intent and chooses which specialized agent(s) to call.
+
+        For multi-intent queries, returns multiple route decisions so the
+        graph can fan out to parallel agent nodes.
+        """
+        user_message = state["messages"][-1].content
+        memory_context = state.get("memory_context", "")
+
+        # Augment context with LT facts for the Router
+        facts = state.get("semantic_facts", [])
+        if facts:
+            memory_context += "\n=== LONG-TERM FACTS ===\n"
+            for f in facts:
+                memory_context += f"- {f.get('text', '')}\n"
+
+        # Router now returns MultiRouteDecision
+        multi_decision = self.router.route(user_message, memory_context)
+
+        # Serialise all decisions for the state
+        route_decisions = [
+            {
+                "route": d.route,
+                "action": d.action,
+                "params": d.params or {},
+                "reasoning": d.reasoning,
+            }
+            for d in multi_decision.decisions
+        ]
+
+        return {
+            # Full list of decisions (multi-route)
+            "route_decisions": route_decisions,
+            # Primary decision (backward compat)
+            "route_decision": route_decisions[0],
+        }
+
+    def supervisor_routing(self, state: AgentState) -> Union[str, List[str]]:
+        """
+        Map RouteDecision route strings to graph node names.
+
+        Router outputs:  crm | rag | web_search | direct
+        Graph nodes:     admin_agent | clinical_agent | direct_agent
+
+        Returns a single string for single-route (standard conditional edge)
+        or a list of strings for multi-route (LangGraph fan-out).
+
+        Note: web_search is handled by direct_agent, which checks
+        route_decision internally to decide whether to call Tavily.
+        """
+        route_map = {
+            "crm": "admin",
+            "rag": "clinical",
+            "web_search": "direct",
+            "direct": "direct",
+        }
+
+        decisions = state.get("route_decisions", [])
+        if not decisions:
+            return "direct"
+
+        # Map routes to node names, deduplicate, preserve order
+        node_names = []
+        seen = set()
+        for d in decisions:
+            node = route_map.get(d.get("route", "direct"), "direct")
+            if node not in seen:
+                node_names.append(node)
+                seen.add(node)
+
+        # Single route → return string (no fan-out)
+        # Multiple routes → return list (LangGraph fan-out)
+        if len(node_names) == 1:
+            return node_names[0]
+        return node_names
+
+    @observe(name="node_admin_agent")
+    def admin_agent_node(self, state: AgentState) -> Dict:
+        """Specialized Agent for CRM and Scheduling."""
+        # Find the CRM-specific decision from route_decisions
+        decisions = state.get("route_decisions", [])
+        crm_decision = next(
+            (d for d in decisions if d.get("route") == "crm"),
+            state.get("route_decision", {})
+        )
+        action = crm_decision.get("action", "lookup_patient")
+        params = crm_decision.get("params", {})
+
+        system_prompt = build_admin_agent_prompt()
+
+        if not self.crm_tool:
+            tool_output = "CRM Tool unavailable."
+        else:
+            tool_output = self.crm_tool.dispatch(action, params)
+
+        answer = self._generate_agent_response(state, system_prompt, tool_output)
+
+        return {
+            "messages": [AIMessage(content=answer)],
+            "tool_output": tool_output,
+            "final_answer": answer,
+            "agent_outputs": [{"route": "crm", "tool_output": tool_output, "answer": answer}],
+        }
+
+    @observe(name="node_clinical_agent")
+    def clinical_agent_node(self, state: AgentState) -> Dict:
+        """Specialized Agent for Medical Info and Patient History."""
+        # Find the RAG-specific decision from route_decisions
+        decisions = state.get("route_decisions", [])
+        rag_decision = next(
+            (d for d in decisions if d.get("route") == "rag"),
+            state.get("route_decision", {})
+        )
+        params = rag_decision.get("params", {})
+        query = params.get("query", state["messages"][-1].content)
+
+        system_prompt = build_clinical_agent_prompt()
+
+        # Inject semantic facts for clinical context
+        facts = state.get("semantic_facts", [])
+        kb_context = ""
+        if facts:
+            kb_context += "\n=== PATIENT CLINICAL HISTORY ===\n"
+            for f in facts:
+                kb_context += f"- {f.get('text', '')}\n"
+
+        if not self.rag_tool:
+            tool_output = "RAG Tool unavailable."
+        else:
+            tool_output = self.rag_tool.dispatch("search", {"query": query})
+
+        answer = self._generate_agent_response(state, system_prompt, tool_output, extra_context=kb_context)
+
+        return {
+            "messages": [AIMessage(content=answer)],
+            "tool_output": tool_output,
+            "final_answer": answer,
+            "agent_outputs": [{"route": "rag", "tool_output": tool_output, "answer": answer}],
+        }
+
+    @observe(name="node_direct_agent")
+    def direct_agent_node(self, state: AgentState) -> Dict:
+        """Specialized Agent for greetings and general inquiries."""
+        system_prompt = build_direct_agent_prompt()
+
+        # Check if any decision routes to web_search
+        decisions = state.get("route_decisions", [])
+        web_decision = next(
+            (d for d in decisions if d.get("route") == "web_search"),
+            None
         )
 
-        if route == "crm":
-            if not self.crm_tool:
-                return "CRM tool is not available."
-            action = decision.action or "lookup_patient"
-            logger.info("Dispatching CRM action: {} params={}", action, params)
-            result = self.crm_tool.dispatch(action, params)
-            update_current_observation(output=result[:500])
-            return result
+        tool_output = ""
+        route_label = "direct"
+        if web_decision and self.web_tool:
+            params = web_decision.get("params", {})
+            query = params.get("query", state["messages"][-1].content)
+            tool_output = self.web_tool.dispatch("search", {"query": query})
+            route_label = "web_search"
 
-        if route == "rag":
-            if not self.rag_tool:
-                return "Internal knowledge base is not available."
-            query = params.get("query", "")
-            if not query:
-                return "No query provided for knowledge base search."
-            logger.info("Dispatching RAG search: {}", query[:80])
-            result = self.rag_tool.dispatch("search", {"query": query})
-            update_current_observation(output=result[:500])
-            return result
+        answer = self._generate_agent_response(state, system_prompt, tool_output)
 
-        if route == "web_search":
-            if not self.web_tool:
-                return "Web search tool is not available (TAVILY_API_KEY not set)."
-            query = params.get("query", "")
-            if not query:
-                return "No query provided for web search."
-            logger.info("Dispatching web search: {}", query[:80])
-            result = self.web_tool.dispatch("search", {"query": query})
-            update_current_observation(output=result[:500])
-            return result
+        return {
+            "messages": [AIMessage(content=answer)],
+            "tool_output": tool_output,
+            "final_answer": answer,
+            "agent_outputs": [{"route": route_label, "tool_output": tool_output, "answer": answer}],
+        }
 
-        # direct - no tool needed
-        return ""
+    @observe(name="node_merge_responses")
+    def merge_responses_node(self, state: AgentState) -> Dict:
+        """
+        Fan-in node: merges outputs from parallel agent nodes.
 
-    @observe(name="synthesiser", as_type="generation")
-    def _synthesise(
-        self,
-        user_message: str,
-        memory_context: str,
-        route: str,
-        tool_output: str,
-    ) -> str:
-        """Run the synthesiser LLM to produce the final answer."""
-        system_prompt, user_prompt = build_synthesiser_prompt(
-            user_message=user_message,
-            memory_context=memory_context,
-            route=route,
-            tool_output=tool_output,
+        Single-route:  passes through (no extra LLM call, zero latency overhead).
+        Multi-route:   calls the merge synthesiser to produce one coherent response.
+        """
+        agent_outputs = state.get("agent_outputs", [])
+
+        # Single agent → pass through (backward compatible, no overhead)
+        if len(agent_outputs) <= 1:
+            return {}
+
+        # Multi-agent → synthesize into one response
+        logger.info(f"Merging {len(agent_outputs)} agent outputs into unified response")
+
+        user_message = state["messages"][0].content
+        memory_context = state.get("memory_context", "")
+
+        # Build labelled tool output sections for the synthesiser
+        combined_tool_output = ""
+        for out in agent_outputs:
+            route = out.get("route", "unknown").upper()
+            answer = out.get("answer", "")
+            combined_tool_output += f"=== {route} AGENT RESULT ===\n{answer}\n\n"
+
+        system_prompt = build_merge_prompt()
+
+        system_content = (
+            f"{system_prompt}\n\n"
+            f"=== MEMORY CONTEXT ===\n{memory_context}\n\n"
+            f"=== AGENT RESULTS TO MERGE ===\n{combined_tool_output}"
         )
 
-        update_current_observation(
-            input=user_prompt[:1000],
-            model=self._model_name(),
+        messages = [
+            SystemMessage(content=system_content),
+            HumanMessage(content=user_message),
+        ]
+
+        response = self.llm_chat.invoke(messages)
+        merged_answer = response.content if hasattr(response, "content") else str(response)
+
+        # Combine all tool outputs
+        all_tool_output = "\n---\n".join(
+            out.get("tool_output", "") for out in agent_outputs if out.get("tool_output")
         )
 
-        try:
-            response = self.llm_chat.invoke(
-                [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ]
-            )
-            content = (
-                response.content
-                if hasattr(response, "content")
-                else str(response)
-            )
+        return {
+            "final_answer": merged_answer,
+            "tool_output": all_tool_output,
+            "messages": [AIMessage(content=merged_answer)],
+        }
 
-            # Extract token usage if available
-            usage = {}
-            if hasattr(response, "response_metadata"):
-                meta = response.response_metadata or {}
-                token_usage = meta.get("token_usage") or meta.get("usage", {})
-                if token_usage:
-                    usage = {
-                        "input": token_usage.get("prompt_tokens", 0),
-                        "output": token_usage.get("completion_tokens", 0),
-                        "total": token_usage.get("total_tokens", 0),
-                    }
+    @observe(name="node_save_memory")
+    def store_and_distill_node(self, state: AgentState) -> Dict:
+        """Saves messages to short-term and extracts long-term facts."""
+        user_message = state["messages"][0].content
+        answer = state["final_answer"]
+        user_id = state["user_id"]
+        session_id = state["session_id"]
 
-            update_current_observation(
-                output=content.strip()[:1000],
-                usage=usage if usage else None,
-            )
-
-            return content.strip()
-        except Exception as exc:
-            logger.error("Synthesiser LLM failed: {}", exc)
-            if tool_output:
-                return f"Here's what I found:\n{tool_output}"
-            return "I'm sorry, I encountered an error processing your request."
-
-    @observe(name="memory_store")
-    def _store_turns(
-        self,
-        user_id: str,
-        session_id: str,
-        user_message: str,
-        answer: str,
-    ) -> None:
-        """Store user + assistant turns in short-term memory."""
+        # Store ST turns
         now = time.time()
-        self.st_store.add(
-            user_id,
-            session_id,
-            ConversationTurn(
-                user_id=user_id,
-                session_id=session_id,
-                role="user",
-                content=user_message,
-                ts=now,
-            ),
-        )
-        self.st_store.add(
-            user_id,
-            session_id,
-            ConversationTurn(
-                user_id=user_id,
-                session_id=session_id,
-                role="assistant",
-                content=answer,
-                ts=now,
-            ),
-        )
+        self.st_store.add(user_id, session_id, ConversationTurn(user_id=user_id, session_id=session_id, role="user", content=user_message, ts=now))
+        self.st_store.add(user_id, session_id, ConversationTurn(user_id=user_id, session_id=session_id, role="assistant", content=answer, ts=now))
 
-    @observe(name="memory_distill")
-    def _maybe_distill(self, user_id: str, session_id: str) -> None:
-        """Trigger memory distillation if the policy says so."""
+        # Distill if needed
         try:
-            recent = self.st_store.recent(user_id, session_id, k=10)
+            recent = self.st_store.recent(user_id, session_id, k=5)
             if self.distiller.should_distill(recent):
-                logger.info("Triggering memory distillation for {}", user_id)
+                logger.info(f"Distilling new facts for {user_id}...")
                 self.distiller.distill(user_id, recent)
-                update_current_observation(
-                    metadata={"distillation_triggered": True},
-                )
-        except Exception as exc:
-            logger.warning("Distillation skipped: {}", exc)
+                return {"should_distill": True}
+        except Exception as e:
+            logger.warning(f"Distillation failed: {e}")
 
-    #  helpers
+        return {"should_distill": False}
 
-    def _model_name(self) -> str:
-        """Extract model name from the chat LLM for LangFuse metadata."""
-        if hasattr(self.llm_chat, "model_name"):
-            return self.llm_chat.model_name
-        if hasattr(self.llm_chat, "model"):
-            return self.llm_chat.model
-        return "unknown"
+    # ── Core Helpers ──────────────────────────────────────────────
+
+    def _generate_agent_response(self, state: AgentState, system_prompt: str, tool_output: str, extra_context: str = "") -> str:
+        """
+        Standard LLM call for all sub-agents.
+
+        Each sub-agent calls its prompt builder (e.g. build_admin_agent_prompt())
+        which fetches from LangFuse Prompt Management with local fallbacks.
+        The system_prompt passed here is already the fully composed prompt.
+        """
+        user_message = state["messages"][-1].content
+        memory_context = state.get("memory_context", "") + extra_context
+
+        system_content = (
+            f"{system_prompt}\n\n"
+            f"=== MEMORY CONTEXT ===\n{memory_context}\n\n"
+            f"=== TOOL OUTPUT ===\n{tool_output}"
+        )
+
+        messages = [
+            SystemMessage(content=system_content),
+            HumanMessage(content=user_message),
+        ]
+
+        response = self.llm_chat.invoke(messages)
+        return response.content if hasattr(response, "content") else str(response)
+
+    # ── Entry Point ───────────────────────────────────────────────
+
+    @observe(name="agent_chat")
+    def chat(self, user_message: str, user_id: str, session_id: str) -> AgentResponse:
+        """Run the graph for one interaction."""
+        t0 = time.time()
+
+        initial_state = {
+            "messages": [HumanMessage(content=user_message)],
+            "user_id": user_id,
+            "session_id": session_id,
+            "agent_outputs": [],  # initialise the fan-out collector
+        }
+
+        # Run the LangGraph state machine
+        final_state = self.graph.invoke(initial_state)
+
+        latency = int((time.time() - t0) * 1000)
+
+        # Extract all routes taken
+        route_decisions = final_state.get("route_decisions", [])
+        all_routes = [d.get("route", "direct") for d in route_decisions]
+        primary = route_decisions[0] if route_decisions else {"route": "direct"}
+
+        return AgentResponse(
+            answer=final_state["final_answer"],
+            route=primary.get("route", "direct"),
+            routes=all_routes,
+            action=primary.get("action"),
+            tool_output=final_state.get("tool_output", ""),
+            memory_context=final_state.get("memory_context", ""),
+            latency_ms=latency
+        )
+
+    # ── Async Entry Point (for FastAPI) ──────────────────────────
+
+    async def achat(self, user_message: str, user_id: str, session_id: str) -> AgentResponse:
+        """
+        Async version of chat() — uses graph.ainvoke() for non-blocking execution.
+
+        Identical logic to chat(), but awaits ainvoke() so the FastAPI event
+        loop isn't blocked during LLM calls.  Notebooks can keep using chat().
+        """
+        t0 = time.time()
+
+        initial_state = {
+            "messages": [HumanMessage(content=user_message)],
+            "user_id": user_id,
+            "session_id": session_id,
+            "agent_outputs": [],
+        }
+
+        # Non-blocking graph execution
+        final_state = await self.graph.ainvoke(initial_state)
+
+        latency = int((time.time() - t0) * 1000)
+
+        route_decisions = final_state.get("route_decisions", [])
+        all_routes = [d.get("route", "direct") for d in route_decisions]
+        primary = route_decisions[0] if route_decisions else {"route": "direct"}
+
+        return AgentResponse(
+            answer=final_state["final_answer"],
+            route=primary.get("route", "direct"),
+            routes=all_routes,
+            action=primary.get("action"),
+            tool_output=final_state.get("tool_output", ""),
+            memory_context=final_state.get("memory_context", ""),
+            latency_ms=latency
+        )
 
 
-# Factory: build a fully-wired orchestrator from config
+# ── Factory function ──────────────────────────────────────────
 
-
-def build_agent(
-    enable_crm: bool = True,
-    enable_rag: bool = True,
-    enable_web: bool = True,
-) -> AgentOrchestrator:
-    """
-    Convenience factory that constructs and wires all components.
-
-    Reads config / env for API keys and database URLs.
-
-    Args:
-        enable_crm: Attach CRM tool.
-        enable_rag: Attach RAG tool.
-        enable_web: Attach Web Search tool.
-
-    Returns:
-        A fully initialised ``AgentOrchestrator``.
-    """
-    from dotenv import load_dotenv
-
-    load_dotenv()
-
-    # Eagerly init LangFuse so child spans are captured
-    from infrastructure.observability import get_langfuse
-
-    get_langfuse()
-
-    from infrastructure.llm import (
-        get_chat_llm,
-        get_router_llm,
-        get_extractor_llm,
-        get_default_embeddings,
-    )
+def build_agent(enable_crm: bool = True, enable_rag: bool = True, enable_web: bool = True) -> AgentOrchestrator:
+    """Builds the Multi-Agent Orchestrator."""
+    from infrastructure.llm import get_chat_llm, get_router_llm, get_extractor_llm, get_default_embeddings
     from memory.st_store import ShortTermMemoryStore
     from memory.lt_store import LongTermMemoryStore
     from memory.memory_ops import MemoryRecaller, MemoryDistiller
 
-    # 3-model architecture
-    # Gemini 2.0 Flash - synthesis
     llm_chat = get_chat_llm(temperature=0)
-    llm_router = get_router_llm(temperature=0)       # GPT-4o-mini - routing
-    # Llama 3.1 8B via Groq - extraction
+    llm_router = get_router_llm(temperature=0)
     llm_extractor = get_extractor_llm(temperature=0)
     embedder = get_default_embeddings()
 
-    logger.info("LLM models loaded:")
-    logger.info("   Chat (synthesis) : {}", getattr(
-        llm_chat, 'model_name', getattr(llm_chat, 'model', '?')))
-    logger.info("   Router           : {}", getattr(
-        llm_router, 'model_name', getattr(llm_router, 'model', '?')))
-    logger.info("   Extractor        : {}", getattr(llm_extractor,
-                'model_name', getattr(llm_extractor, 'model', '?')))
-
-    # Memory stores
     st_store = ShortTermMemoryStore()
     lt_store = LongTermMemoryStore(embedder)
     recaller = MemoryRecaller(st_store, lt_store)
     distiller = MemoryDistiller(llm_extractor, lt_store)
 
-    # Tools (each optional)
     crm_tool = None
-    rag_tool = None
-    web_tool = None
-
     if enable_crm:
         try:
             from agents.tools import CRMTool
-
             crm_tool = CRMTool()
-            logger.info("✓ CRM tool loaded")
-        except Exception as exc:
-            logger.warning("CRM tool unavailable: {}", exc)
+            logger.info("CRM tool initialised")
+        except Exception as e:
+            logger.warning(f"CRM tool unavailable: {e}")
 
+    rag_tool = None
     if enable_rag:
         try:
             from agents.tools import RAGTool
-            from infrastructure.config import KNOWN_FAQS
-            from infrastructure.db.qdrant_client import ensure_kb_ingested
-
-            # Auto-ingest KB if the collection is missing or empty
-            ensure_kb_ingested()
-
             rag_tool = RAGTool(embedder=embedder, llm=llm_chat)
-            logger.info(" RAG tool loaded (CAG-enabled)")
+            logger.info("RAG tool initialised")
+        except Exception as e:
+            logger.warning(f"RAG tool unavailable: {e}")
 
-            # Warm CAG cache with known FAQs from config/faqs.yaml
-            if KNOWN_FAQS:
-                warmed = rag_tool.warm_cache(KNOWN_FAQS)
-                if warmed:
-                    logger.info(
-                        "CAG cache warmed with {} new FAQ entries", warmed)
-                else:
-                    logger.info("CAG cache already warm ({} FAQs)",
-                                len(KNOWN_FAQS))
-        except Exception as exc:
-            logger.warning("RAG tool unavailable: {}", exc)
-
+    web_tool = None
     if enable_web:
         try:
             from agents.tools import WebSearchTool
-
             web_tool = WebSearchTool()
-            logger.info(" Web search tool loaded")
-        except Exception as exc:
-            logger.warning("Web search tool unavailable: {}", exc)
+            logger.info("Web search tool initialised")
+        except Exception as e:
+            logger.warning(f"Web search tool unavailable: {e}")
 
     return AgentOrchestrator(
         llm_chat=llm_chat,
@@ -471,5 +579,5 @@ def build_agent(
         distiller=distiller,
         crm_tool=crm_tool,
         rag_tool=rag_tool,
-        web_tool=web_tool,
+        web_tool=web_tool
     )

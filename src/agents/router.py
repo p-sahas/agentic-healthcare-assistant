@@ -1,17 +1,21 @@
 """
-Query Router - LLM-based intent classification.
+Query Router — LLM-based intent classification.
 
-Takes a user message + memory context and returns a ``RouteDecision``
-that tells the orchestrator which tool to invoke and with what params.
+Takes a user message + memory context and returns a ``MultiRouteDecision``
+containing one or more ``RouteDecision`` objects.  When the user query
+contains multiple independent intents (e.g. "Check my appointments AND
+what is the infection control policy?") the router returns multiple
+routes so the orchestrator can fan out to parallel agent nodes.
 """
 
 import json
 from loguru import logger
 from dataclasses import dataclass, field
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from agents.prompts.agent_prompts import build_router_prompt
 from infrastructure.observability import observe, update_current_observation
+
 # Valid routes
 VALID_ROUTES = {"crm", "rag", "web_search", "direct"}
 
@@ -24,11 +28,14 @@ VALID_CRM_ACTIONS = {
     "reschedule_booking",
 }
 
+# Maximum routes per query (safety cap)
+MAX_ROUTES = 3
+
 
 @dataclass
 class RouteDecision:
     """
-    Output of the router LLM call.
+    A single routing decision for one intent.
 
     Attributes:
         route: Primary route (crm | rag | web_search | direct).
@@ -43,6 +50,29 @@ class RouteDecision:
     reasoning: str = ""
     action: Optional[str] = None
     params: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class MultiRouteDecision:
+    """
+    Container for one or more RouteDecision objects.
+
+    Single-intent queries produce ``decisions`` with one element.
+    Multi-intent queries (e.g. "book me an appointment AND tell me
+    about infection control") produce multiple elements, enabling
+    LangGraph fan-out to parallel agent nodes.
+    """
+
+    decisions: List[RouteDecision] = field(default_factory=list)
+
+    @property
+    def is_multi_route(self) -> bool:
+        return len(self.decisions) > 1
+
+    @property
+    def primary(self) -> RouteDecision:
+        """First (or only) decision — backward compatibility."""
+        return self.decisions[0] if self.decisions else RouteDecision()
 
 
 class QueryRouter:
@@ -65,9 +95,14 @@ class QueryRouter:
         self,
         user_message: str,
         memory_context: str = "",
-    ) -> RouteDecision:
+    ) -> MultiRouteDecision:
         """
         Classify user intent and extract parameters.
+
+        Returns a ``MultiRouteDecision`` containing one or more
+        ``RouteDecision`` objects.  For most queries only one route
+        is returned; multi-route is triggered only when the user
+        asks clearly separate questions in one message.
 
         Traced as a LangFuse **generation** so cost/tokens are captured.
         """
@@ -113,11 +148,13 @@ class QueryRouter:
 
         except Exception as exc:
             logger.error("Router LLM call failed: {}", exc)
-            return RouteDecision(
-                route="direct",
-                confidence=0.0,
-                reasoning=f"Router LLM error: {exc}",
-            )
+            return MultiRouteDecision(decisions=[
+                RouteDecision(
+                    route="direct",
+                    confidence=0.0,
+                    reasoning=f"Router LLM error: {exc}",
+                )
+            ])
 
         return self._parse_response(content)
 
@@ -129,18 +166,23 @@ class QueryRouter:
             return self.llm.model
         return "unknown"
 
-    #  parsing ─
+    # ── parsing ───────────────────────────────────────────────
 
-    def _parse_response(self, raw: str) -> RouteDecision:
+    def _parse_response(self, raw: str) -> MultiRouteDecision:
         """
         Parse the JSON response from the router LLM.
 
-        Handles markdown fences and partial JSON gracefully.
+        Supports two formats:
+          - Multi-route (new):  ``{"routes": [{...}, {...}]}``
+          - Single-route (old): ``{"route": "crm", ...}``
+
+        The old format is auto-wrapped into a single-element list
+        for full backward compatibility.
         """
         # Strip markdown fences if present
         text = raw.strip()
         if text.startswith("```"):
-            text = text.split("\n", 1)[-1]  # drop first line
+            text = text.split("\n", 1)[-1]
         if text.endswith("```"):
             text = text.rsplit("```", 1)[0]
         text = text.strip()
@@ -149,42 +191,61 @@ class QueryRouter:
         start = text.find("{")
         end = text.rfind("}")
         if start == -1 or end == -1:
-            logger.warning(
-                "Router output is not JSON; falling back to direct.")
-            return RouteDecision(
-                route="direct",
-                confidence=0.0,
-                reasoning="Failed to parse router output as JSON.",
-            )
+            logger.warning("Router output is not JSON; falling back to direct.")
+            return MultiRouteDecision(decisions=[
+                RouteDecision(route="direct", confidence=0.0,
+                              reasoning="Failed to parse router output as JSON.")
+            ])
 
         try:
-            data = json.loads(text[start: end + 1])
+            data = json.loads(text[start : end + 1])
         except json.JSONDecodeError as exc:
             logger.warning("Router JSON parse error: {}", exc)
-            return RouteDecision(
-                route="direct",
-                confidence=0.0,
-                reasoning=f"JSON parse error: {exc}",
-            )
+            return MultiRouteDecision(decisions=[
+                RouteDecision(route="direct", confidence=0.0,
+                              reasoning=f"JSON parse error: {exc}")
+            ])
 
-        # Validate
-        route = data.get("route", "direct")
-        if route not in VALID_ROUTES:
-            logger.warning(
-                "Invalid route '{}'; falling back to direct.", route)
-            route = "direct"
+        # ── Normalise to a list of route dicts ──────────────────
+        if "routes" in data and isinstance(data["routes"], list):
+            # New multi-route format
+            route_dicts = data["routes"][:MAX_ROUTES]
+        else:
+            # Old single-route format — wrap in list
+            route_dicts = [data]
 
-        action = data.get("action")
-        if route == "crm" and action not in VALID_CRM_ACTIONS:
-            logger.warning(
-                "Invalid CRM action '{}'; defaulting to lookup_patient.", action
-            )
-            action = "lookup_patient"
+        # ── Build RouteDecision objects ──────────────────────────
+        decisions: List[RouteDecision] = []
+        seen_routes: set = set()
 
-        return RouteDecision(
-            route=route,
-            confidence=float(data.get("confidence", 0.5)),
-            reasoning=data.get("reasoning", ""),
-            action=action if route == "crm" else None,
-            params=data.get("params", {}),
-        )
+        for rd in route_dicts:
+            route = rd.get("route", "direct")
+            if route not in VALID_ROUTES:
+                logger.warning("Invalid route '{}'; skipping.", route)
+                continue
+            # Deduplicate (same route appearing twice)
+            if route in seen_routes:
+                continue
+            seen_routes.add(route)
+
+            action = rd.get("action")
+            if route == "crm" and action not in VALID_CRM_ACTIONS:
+                logger.warning(
+                    "Invalid CRM action '{}'; defaulting to lookup_patient.", action
+                )
+                action = "lookup_patient"
+
+            decisions.append(RouteDecision(
+                route=route,
+                confidence=float(rd.get("confidence", 0.5)),
+                reasoning=rd.get("reasoning", ""),
+                action=action if route == "crm" else None,
+                params=rd.get("params", {}),
+            ))
+
+        # Fallback if nothing valid was parsed
+        if not decisions:
+            decisions = [RouteDecision(route="direct", confidence=0.0,
+                                       reasoning="No valid routes parsed.")]
+
+        return MultiRouteDecision(decisions=decisions)

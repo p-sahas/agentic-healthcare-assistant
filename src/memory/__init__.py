@@ -1,5 +1,5 @@
 """
-Memory system - schemas, policies, prompts, stores, and operations.
+Memory system — schemas, policies, prompts, stores, and operations.
 
 Memory types:
   - Short-term: Recent conversation turns (Supabase)
