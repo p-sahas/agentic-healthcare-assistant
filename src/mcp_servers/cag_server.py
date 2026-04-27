@@ -1,5 +1,5 @@
 """
-CAG Cache MCP Server — exposes the Qdrant-backed semantic cache over MCP.
+CAG Cache MCP Server - exposes the Qdrant-backed semantic cache over MCP.
 
 Wraps ``src/services/chat_service/cag_cache.py``. Lets any MCP host
 check or populate the same cache the agent uses, so pre-computed

@@ -1,10 +1,10 @@
 """
-Web Crawler MCP Server — exposes the Playwright BFS crawler over MCP.
+Web Crawler MCP Server - exposes the Playwright BFS crawler over MCP.
 
 Wraps ``src/services/ingest_service/web_crawler.py``. The crawler is
 heavyweight (spins up a headless Chromium via Playwright) so the tool
 is async and returns structured documents the client can feed into
-any ingestion pipeline — not just the hospital one.
+any ingestion pipeline - not just the hospital one.
 
 Transport: stdio
 
