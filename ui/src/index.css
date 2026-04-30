@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body, #root {
+    height: 100%;
+  }
+  body {
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+  /* Scrollbar styling (webkit) */
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #1f2937; border-radius: 8px; }
+  ::-webkit-scrollbar-thumb:hover { background: #374151; }
+}
+
+@layer components {
+  /* Markdown tables inside assistant bubbles */
+  .prose-invert table {
+    @apply w-full border-collapse my-2 text-xs;
+  }
+  .prose-invert th {
+    @apply text-left font-semibold text-slate-200 bg-bg-soft px-2 py-1.5 border border-border;
+  }
+  .prose-invert td {
+    @apply px-2 py-1.5 border border-border text-slate-300 align-top;
+  }
+  .prose-invert tr:nth-child(even) td {
+    @apply bg-bg-soft/40;
+  }
+
+  .card {
+    @apply bg-bg-card border border-border rounded-xl;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium
+           transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply btn bg-brand-500 text-slate-900 hover:bg-brand-400;
+  }
+  .btn-ghost {
+    @apply btn bg-transparent text-slate-300 hover:bg-bg-soft;
+  }
+  .input {
+    @apply w-full bg-bg-soft border border-border rounded-lg px-3 py-2 text-sm
+           text-slate-100 placeholder-slate-500 outline-none focus:border-brand-500
+           transition-colors;
+  }
+  .kbd {
+    @apply px-1.5 py-0.5 rounded text-[10px] bg-bg-soft border border-border font-mono text-slate-400;
+  }
+}
