@@ -4,12 +4,7 @@
         query-crm \
         ingest-qdrant ingest-qdrant-recreate qdrant-info \
         mem-dev test-all \
-        demo notebooks
-
-
-VENV := .venv
-PYTHON := $(VENV)/bin/python
-PIP := $(VENV)/bin/pip
+        demo demo-down demo-logs notebooks
 
 # ============================================================================
 #  HELP - Show all available commands
@@ -44,8 +39,12 @@ help:
 	@echo "  make test-all             Run all tests"
 	@echo "  make mem-dev              Test memory components"
 	@echo ""
-	@echo " DEMOS"
-	@echo "  make demo                 Run full workflow demo"
+	@echo " DOCKER DEMO"
+	@echo "  make demo                 Build + start api + web (localhost:8080)"
+	@echo "  make demo-logs            Tail api container logs"
+	@echo "  make demo-down            Stop containers"
+	@echo ""
+	@echo " NOTEBOOKS"
 	@echo "  make notebooks            Start Jupyter notebooks"
 	@echo ""
 	@echo " CLEANUP"
@@ -57,11 +56,10 @@ help:
 # ============================================================================
 
 install:
-	@echo " Installing dependencies with uv..."
-	uv venv $(VENV)
-	uv pip install -r requirements.txt
+	@echo " Installing dependencies..."
+	pip install -r requirements.txt
 	@echo " Installation complete!"
-	@echo " Run 'source .venv/bin/activate' to activate the environ
+
 # ============================================================================
 #  SUPABASE SETUP (Production Database)
 # ============================================================================
@@ -108,7 +106,7 @@ ingest-qdrant:
 
 ingest-qdrant-recreate:
 	@echo "╔════════════════════════════════════════════════════════════════╗"
-	@echo "║       Recreating Qdrant Collection + Re-ingesting              ║"
+	@echo "║    Recreating Qdrant Collection + Re-ingesting              ║"
 	@echo "╚════════════════════════════════════════════════════════════════╝"
 	@PYTHONPATH=src python scripts/ingest_to_qdrant.py --source kb --strategy parent_child --recreate
 
@@ -128,7 +126,7 @@ seed-crm-large:
 	@echo "║      Seeding CRM — Supabase (Small)                            ║"
 	@echo "╚════════════════════════════════════════════════════════════════╝"
 	@echo ""
-	@echo "  Config: LLM mode | 10 doctors | 20 patients | ~30s | ~$$0.01"
+	@echo "   Config: LLM mode | 10 doctors | 20 patients | ~30s | ~$$0.01"
 	@echo ""
 	@PYTHONPATH=src python scripts/seed_crm_unified.py \
 		--mode llm \
@@ -189,7 +187,7 @@ seed-procedures:
 
 query-crm:
 	@echo "╔════════════════════════════════════════════════════════════════╗"
-	@echo "║               CRM Database Statistics (Supabase)               ║"
+	@echo "║              CRM Database Statistics (Supabase)               ║"
 	@echo "╚════════════════════════════════════════════════════════════════╝"
 	@echo ""
 	@PYTHONPATH=src python -c "\
@@ -209,7 +207,7 @@ status:
 	@echo "╚════════════════════════════════════════════════════════════════╝"
 	@echo ""
 	@echo " Data Sources:"
-	@echo "   CRM + Memory: Supabase PostgreSQL (cloud)"
+	@echo "    CRM + Memory: Supabase PostgreSQL (cloud)"
 	@echo "   RAG KB:        Qdrant Cloud"
 	@echo "   CAG Cache:     Qdrant Cloud (cag_cache collection)"
 	@echo ""
@@ -248,6 +246,45 @@ notebooks:
 	@echo " Starting Jupyter notebooks..."
 	@echo "   Navigate to: http://localhost:8888"
 	@jupyter notebook notebooks/
+
+# ============================================================================
+#  DOCKER DEMO — one-shot containerised stack
+# ============================================================================
+# Brings up the full app (FastAPI + nginx/SPA) in two containers.
+# Requires: Docker Desktop running, .env populated with real secrets.
+
+demo:
+	@if [ ! -f .env ]; then \
+		echo "  No .env found in $$(pwd)."; \
+		echo ""; \
+		echo "    Create a .env file with your secrets:"; \
+		echo "      SUPABASE_DB_URL  (port 6543!)"; \
+		echo "      QDRANT_URL, QDRANT_API_KEY"; \
+		echo "      GROQ_API_KEY, OPENROUTER_API_KEY, OPENAI_API_KEY"; \
+		echo "      TAVILY_API_KEY, LANGFUSE_* (optional)"; \
+		exit 1; \
+	fi
+	@echo "  Building and starting api + web containers..."
+	docker compose up --build -d
+	@echo ""
+	@echo "  Stack is up. First boot takes ~60s for lifespan warmup."
+	@echo ""
+	@echo "    Web UI →  http://localhost:8080"
+	@echo "    API   →  http://localhost:8000  (docs at /docs)"
+	@echo ""
+	@echo "    Try these to see CAG / RAG / CRM each light up:"
+	@echo "      • 'What are the opening hours?'           (CAG  ~290 ms)"
+	@echo "      • 'Do I have a booking next week?'        (CRM  ~3-5 s)"
+	@echo "      • 'How do I claim insurance?'             (CAG)"
+	@echo ""
+	@echo "    Logs:  make demo-logs    Stop:  make demo-down"
+
+demo-logs:
+	docker compose logs -f api
+
+demo-down:
+	docker compose down
+	@echo " Stack stopped. Use 'docker compose down -v' to also wipe the HF cache volume."
 
 # ============================================================================
 #  CLEANUP
