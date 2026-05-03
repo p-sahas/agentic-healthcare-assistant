@@ -1,0 +1,63 @@
+# =============================================================================
+# Nawaloka Health Assistant — local / single-host deployment
+#
+# Two services, both built from the repo:
+#
+#   api   FastAPI + agent + MCP subprocesses        :8000
+#   web   nginx + React SPA + /api reverse proxy    :8080 → 80
+#
+# Everything else (Supabase, Qdrant, Groq, OpenRouter, Langfuse, OpenAI) is
+# external — bring keys in via a ``.env`` file at the project root.
+#
+# Usage:
+#     docker compose up --build         # build + run in foreground
+#     docker compose up -d              # detached
+#     docker compose logs -f api        # follow api logs
+#     docker compose down               # stop
+#     docker compose down -v            # also wipe the HF model cache volume
+# =============================================================================
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: docker/api/Dockerfile
+    image: nawaloka-api
+    container_name: nawaloka-api
+    ports:
+      - "8000:8000"               # exposed for /docs and direct API access
+    env_file:
+      - .env                      # SUPABASE_DB_URL, GROQ_API_KEY, etc.
+    volumes:
+      # Persist the sentence-transformers model across restarts
+      # (~90 MB; without this it re-downloads every container start).
+      - hf_cache:/root/.cache/huggingface
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 90s           # lifespan warmup needs time on cold start
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/web/Dockerfile
+    image: nawaloka-web
+    container_name: nawaloka-web
+    ports:
+      - "8080:80"                 # browse to http://localhost:8080
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost/healthz"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+
+volumes:
+  hf_cache:
+    name: nawaloka_hf_cache

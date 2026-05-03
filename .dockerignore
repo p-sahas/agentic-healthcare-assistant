@@ -1,0 +1,52 @@
+# ── version control & editor ────────────────────────────────────────
+.git
+.gitignore
+.gitattributes
+.vscode
+.idea
+*.swp
+
+# ── claude / agent tooling (not needed in the image) ────────────────
+.claude
+session-export-*
+
+# ── python build / venv / cache ─────────────────────────────────────
+.venv
+venv
+__pycache__
+*.py[cod]
+*.egg-info
+.mypy_cache
+.pytest_cache
+.ruff_cache
+.coverage
+htmlcov
+
+# ── ui build artefacts (web image rebuilds them inside its stage) ──
+ui/node_modules
+ui/dist
+ui/.vite
+ui/.env
+ui/.env.local
+
+# ── secrets — explicitly do NOT bake into images ───────────────────
+.env
+.env.local
+.env.*.local
+
+# ── large local data / scratch ─────────────────────────────────────
+data/
+notebooks/
+slides/
+docs/*.pdf
+docs/*.pptx
+*.log
+*.jsonl
+cursor_diagrams_in_codebase_guide_md.md
+
+# ── OS junk ────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── docker-compose state (would create a recursive copy) ────────────
+docker/**/*.lock
